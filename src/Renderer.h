@@ -1,7 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#define GLM_SWIZZLE
+#define GLM_FORCE_SWIZZLE
 
 #include <atomic>
 #include "3dgs.h"
