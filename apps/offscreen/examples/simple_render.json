@@ -1,0 +1,25 @@
+{
+  "scene": "scene.ply",
+  "output": {
+    "directory": "renders",
+    "filename_pattern": "frame_%04d.ppm",
+    "format": "ppm"
+  },
+  "render": {
+    "width": 1280,
+    "height": 720,
+    "fov_degrees": 45.0,
+    "near": 0.2,
+    "far": 1000.0
+  },
+  "vulkan": {
+    "validation": false
+  },
+  "frames": [
+    {
+      "name": "front",
+      "position": [0.0, 0.0, 0.0],
+      "rotation_quat": [1.0, 0.0, 0.0, 0.0]
+    }
+  ]
+}

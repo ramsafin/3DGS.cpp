@@ -38,12 +38,6 @@ VulkanContext::VulkanContext(const std::vector<std::string>& instance_extensions
                              const std::vector<std::string>& device_extensions, bool validation_layers_enabled)
     : instanceExtensions(instance_extensions), deviceExtensions(device_extensions),
       validationLayersEnabled(validation_layers_enabled) {
-#ifdef __APPLE__
-    #ifndef VKGS_ENABLE_METAL
-        instanceExtensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-        deviceExtensions.push_back("VK_KHR_portability_subset");
-    #endif
-#endif
     deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 
     if (validation_layers_enabled) {
@@ -52,16 +46,7 @@ VulkanContext::VulkanContext(const std::vector<std::string>& instance_extensions
         instanceExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-#ifndef VKGS_ENABLE_METAL
     VULKAN_HPP_DEFAULT_DISPATCHER.init();
-#else
-    void *libvulkan = dlopen("MoltenVK.framework/MoltenVK", RTLD_NOW | RTLD_LOCAL);
-    if (!libvulkan) {
-        throw std::runtime_error("MoltenVK not found");
-    }
-    auto vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) dlsym(libvulkan, "vkGetInstanceProcAddr");
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
-#endif
 }
 
 void VulkanContext::createInstance() {
@@ -91,9 +76,6 @@ void VulkanContext::createInstance() {
         }
     };
 
-#ifdef __APPLE__
-    createInfoChain.get<vk::InstanceCreateInfo>().flags |= vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR;
-#endif
 
     if (!validationLayersEnabled) {
         createInfoChain.unlink<vk::DebugUtilsMessengerCreateInfoEXT>();
@@ -194,7 +176,7 @@ VulkanContext::QueueFamilyIndices VulkanContext::findQueueFamilies() {
                 indices.presentFamily = i;
             }
         }
-        if (indices.isComplete()) {
+        if (indices.isComplete(surface.has_value())) {
             break;
         }
     }
@@ -218,9 +200,11 @@ void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeature
     QueueFamilyIndices indices = findQueueFamilies();
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {
-        indices.graphicsFamily.value(), indices.computeFamily.value(),
-        indices.presentFamily.value()
+        indices.graphicsFamily.value(), indices.computeFamily.value()
     };
+    if (indices.presentFamily.has_value()) {
+        uniqueQueueFamilies.insert(indices.presentFamily.value());
+    }
 
     float queuePriority = 1.0f;
     for (auto queueFamily: uniqueQueueFamilies) {
@@ -252,7 +236,7 @@ void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeature
         if (unique_queue_family == indices.computeFamily.value()) {
             types.insert(Queue::Type::COMPUTE);
         }
-        if (unique_queue_family == indices.presentFamily.value()) {
+        if (indices.presentFamily.has_value() && unique_queue_family == indices.presentFamily.value()) {
             types.insert(Queue::Type::PRESENT);
         }
 

@@ -9,11 +9,15 @@
 #include "vulkan/Window.h"
 #include "GSScene.h"
 #include "vulkan/pipelines/ComputePipeline.h"
+#ifdef VKGS_RENDER_MODE_ONSCREEN
 #include "vulkan/Swapchain.h"
+#include "vulkan/ImguiManager.h"
+#else
+#include "vulkan/OffscreenRenderTarget.h"
+#endif
 #include <glm/gtc/quaternion.hpp>
 
 #include "GUIManager.h"
-#include "vulkan/ImguiManager.h"
 #include "vulkan/QueryManager.h"
 
 class Renderer {
@@ -70,6 +74,12 @@ public:
 
     void draw();
 
+    std::vector<uint8_t> readPixels();
+
+    void setCameraPose(float px, float py, float pz, float qw, float qx, float qy, float qz);
+
+    void setCameraProjection(float fovDegrees, float nearPlane, float farPlane);
+
     void run();
 
     void stop();
@@ -88,7 +98,9 @@ private:
     VulkanSplatting::RendererConfiguration configuration;
     std::shared_ptr<Window> window;
     std::shared_ptr<VulkanContext> context;
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     std::shared_ptr<ImguiManager> imguiManager;
+#endif
     std::shared_ptr<GSScene> scene;
     std::shared_ptr<QueryManager> queryManager = std::make_shared<QueryManager>();
     GUIManager guiManager {};
@@ -120,7 +132,11 @@ private:
 
     std::vector<vk::UniqueFence> inflightFences;
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     std::shared_ptr<Swapchain> swapchain;
+#else
+    std::shared_ptr<OffscreenRenderTarget> offscreenRenderTarget;
+#endif
 
     vk::UniqueCommandPool commandPool;
 
@@ -129,13 +145,11 @@ private:
 
     uint32_t currentImageIndex;
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
-
-#ifdef __APPLE__
-    uint32_t numRadixSortBlocksPerWorkgroup = 256;
-#else
-    uint32_t numRadixSortBlocksPerWorkgroup = 32;
 #endif
+
+    uint32_t numRadixSortBlocksPerWorkgroup = 32;
 
     int fpsCounter = 0;
     std::chrono::high_resolution_clock::time_point lastFpsTime = std::chrono::high_resolution_clock::now();
@@ -165,6 +179,12 @@ private:
     void createCommandPool();
 
     void updateUniforms();
+
+    vk::Extent2D getRenderExtent() const;
+
+    const std::vector<std::shared_ptr<Image>>& getRenderImages() const;
+
+    std::shared_ptr<Image> getCurrentRenderImage() const;
 };
 
 
