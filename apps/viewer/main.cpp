@@ -88,6 +88,8 @@ int main(int argc, char** argv) {
 
     auto width = widthFlag ? args::get(widthFlag) : 1280;
     auto height = heightFlag ? args::get(heightFlag) : 720;
+    config.width = width;
+    config.height = height;
 
     config.window = VulkanSplatting::createGlfwWindow("Vulkan Splatting", width, height);
 

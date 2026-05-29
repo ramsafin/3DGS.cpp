@@ -2,7 +2,9 @@
 
 #include <fstream>
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
 #include "vulkan/Swapchain.h"
+#endif
 
 #include <memory>
 #include "shaders.h"
@@ -31,6 +33,7 @@ void Renderer::initialize() {
 }
 
 void Renderer::handleInput() {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     auto translation = window->getCursorTranslation();
     auto keys = window->getKeys(); // W, A, S, D
 
@@ -80,6 +83,7 @@ void Renderer::handleInput() {
             camera.position += (glm::mat4_cast(camera.rotation) * glm::vec4(direction, 1.0f)).xyz() * 0.3f;
         }
     }
+#endif
 }
 
 void Renderer::retrieveTimestamps() {
@@ -100,6 +104,7 @@ void Renderer::retrieveTimestamps() {
 }
 
 void Renderer::recreateSwapchain() {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     auto oldExtent = swapchain->swapchainExtent;
     spdlog::debug("Recreating swapchain");
     swapchain->recreate();
@@ -107,24 +112,34 @@ void Renderer::recreateSwapchain() {
         return;
     }
 
-    auto [width, height] = swapchain->swapchainExtent;
+    auto [width, height] = getRenderExtent();
     auto tileX = (width + 16 - 1) / 16;
     auto tileY = (height + 16 - 1) / 16;
     tileBoundaryBuffer->realloc(tileX * tileY * sizeof(uint32_t) * 2);
 
     recordPreprocessCommandBuffer();
     createRenderPipeline();
+#endif
 }
 
 void Renderer::initializeVulkan() {
     spdlog::debug("Initializing Vulkan");
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     window = configuration.window;
     context = std::make_shared<VulkanContext>(window->getRequiredInstanceExtensions(), std::vector<std::string>{},
                                               configuration.enableVulkanValidationLayers);
+#else
+    context = std::make_shared<VulkanContext>(std::vector<std::string>{}, std::vector<std::string>{},
+                                              configuration.enableVulkanValidationLayers);
+#endif
 
     context->createInstance();
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     auto surface = static_cast<vk::SurfaceKHR>(window->createSurface(context));
     context->selectPhysicalDevice(configuration.physicalDeviceId, surface);
+#else
+    context->selectPhysicalDevice(configuration.physicalDeviceId, std::nullopt);
+#endif
 
     vk::PhysicalDeviceFeatures pdf{};
     vk::PhysicalDeviceVulkan11Features pdf11{};
@@ -133,25 +148,29 @@ void Renderer::initializeVulkan() {
     pdf.shaderInt64 = true;
     // pdf.robustBufferAccess = true;
     // pdf12.shaderFloat16 = true;]
-#ifndef __APPLE__
     pdf12.shaderBufferInt64Atomics = true;
     pdf12.shaderSharedInt64Atomics = true;
-#endif
 
     context->createLogicalDevice(pdf, pdf11, pdf12);
     context->createDescriptorPool(1);
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     swapchain = std::make_shared<Swapchain>(context, window, configuration.immediateSwapchain);
+#else
+    offscreenRenderTarget = std::make_shared<OffscreenRenderTarget>(context, configuration.width, configuration.height);
+#endif
 
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
         inflightFences.emplace_back(
             context->device->createFenceUnique(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled)));
     }
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     renderFinishedSemaphores.resize(FRAMES_IN_FLIGHT);
     for (int i = 0; i < FRAMES_IN_FLIGHT; i++) {
         renderFinishedSemaphores[i] = context->device->createSemaphoreUnique(vk::SemaphoreCreateInfo());
     }
+#endif
 }
 
 void Renderer::loadSceneToGPU() {
@@ -199,6 +218,7 @@ Renderer::Renderer(VulkanSplatting::RendererConfiguration configuration) : confi
 }
 
 void Renderer::createGui() {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     if (!configuration.enableGui) {
         return;
     }
@@ -208,6 +228,28 @@ void Renderer::createGui() {
     imguiManager = std::make_shared<ImguiManager>(context, swapchain, window);
     imguiManager->init();
     guiManager.init();
+#endif
+}
+
+
+vk::Extent2D Renderer::getRenderExtent() const {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
+    return swapchain->swapchainExtent;
+#else
+    return offscreenRenderTarget->extent;
+#endif
+}
+
+const std::vector<std::shared_ptr<Image>>& Renderer::getRenderImages() const {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
+    return swapchain->swapchainImages;
+#else
+    return offscreenRenderTarget->images;
+#endif
+}
+
+std::shared_ptr<Image> Renderer::getCurrentRenderImage() const {
+    return getRenderImages()[currentImageIndex];
 }
 
 void Renderer::createPrefixSumPipeline() {
@@ -315,7 +357,7 @@ void Renderer::createPreprocessSortPipeline() {
 
 void Renderer::createTileBoundaryPipeline() {
     spdlog::debug("Creating tile boundary pipeline");
-    auto [width, height] = swapchain->swapchainExtent;
+    auto [width, height] = getRenderExtent();
     auto tileX = (width + 16 - 1) / 16;
     auto tileY = (height + 16 - 1) / 16;
     tileBoundaryBuffer = Buffer::storage(context, tileX * tileY * sizeof(uint32_t) * 2, false);
@@ -352,7 +394,7 @@ void Renderer::createRenderPipeline() {
     inputSet->build();
 
     auto outputSet = std::make_shared<DescriptorSet>(context, 1);
-    for (auto& image: swapchain->swapchainImages) {
+    for (auto& image: getRenderImages()) {
         outputSet->bindImageToDescriptorSet(0, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute,
                                             image);
     }
@@ -370,6 +412,7 @@ void Renderer::draw() {
     }
     context->device->resetFences(inflightFences[0].get());
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     auto res = context->device->acquireNextImageKHR(swapchain->swapchain.get(), UINT64_MAX,
                                                     swapchain->imageAvailableSemaphores[0].get(),
                                                     nullptr, &currentImageIndex);
@@ -379,6 +422,9 @@ void Renderer::draw() {
     } else if (res != vk::Result::eSuccess && res != vk::Result::eSuboptimalKHR) {
         throw std::runtime_error("Failed to acquire swapchain image");
     }
+#else
+    currentImageIndex = 0;
+#endif
 
 startOfRenderLoop:
     handleInput();
@@ -397,13 +443,18 @@ startOfRenderLoop:
     if (!recordRenderCommandBuffer(0)) {
         goto startOfRenderLoop;
     }
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eComputeShader;
     submitInfo = vk::SubmitInfo{}.setWaitSemaphores(swapchain->imageAvailableSemaphores[0].get())
             .setCommandBuffers(renderCommandBuffer.get())
             .setSignalSemaphores(renderFinishedSemaphores[0].get())
             .setWaitDstStageMask(waitStage);
+#else
+    submitInfo = vk::SubmitInfo{}.setCommandBuffers(renderCommandBuffer.get());
+#endif
     context->queues[VulkanContext::Queue::COMPUTE].queue.submit(submitInfo, inflightFences[0].get());
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     vk::PresentInfoKHR presentInfo{};
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = &renderFinishedSemaphores[0].get();
@@ -423,9 +474,66 @@ startOfRenderLoop:
     } else if (ret != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to present swapchain image");
     }
+#endif
+}
+
+
+std::vector<uint8_t> Renderer::readPixels() {
+#ifdef VKGS_RENDER_MODE_OFFSCREEN
+    auto ret = context->device->waitForFences(inflightFences[0].get(), VK_TRUE, UINT64_MAX);
+    if (ret != vk::Result::eSuccess) {
+        throw std::runtime_error("Failed to wait for render fence before reading pixels");
+    }
+
+    auto [width, height] = getRenderExtent();
+    const auto pixelSize = 4u;
+    const auto byteSize = width * height * pixelSize;
+    auto stagingBuffer = Buffer::staging(context, byteSize);
+    auto image = getCurrentRenderImage();
+
+    auto commandBuffer = context->beginOneTimeCommandBuffer();
+    vk::ImageMemoryBarrier imageMemoryBarrier{};
+    imageMemoryBarrier.oldLayout = vk::ImageLayout::eGeneral;
+    imageMemoryBarrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+    imageMemoryBarrier.image = image->image;
+    imageMemoryBarrier.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+    imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
+    imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader,
+                                   vk::PipelineStageFlagBits::eTransfer,
+                                   vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
+
+    vk::BufferImageCopy copyRegion{};
+    copyRegion.bufferOffset = 0;
+    copyRegion.bufferRowLength = 0;
+    copyRegion.bufferImageHeight = 0;
+    copyRegion.imageSubresource = {vk::ImageAspectFlagBits::eColor, 0, 0, 1};
+    copyRegion.imageOffset = vk::Offset3D{0, 0, 0};
+    copyRegion.imageExtent = vk::Extent3D{width, height, 1};
+    commandBuffer->copyImageToBuffer(image->image, vk::ImageLayout::eTransferSrcOptimal,
+                                     stagingBuffer->buffer, 1, &copyRegion);
+
+    imageMemoryBarrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+    imageMemoryBarrier.newLayout = vk::ImageLayout::eGeneral;
+    imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+    imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                   vk::PipelineStageFlagBits::eComputeShader,
+                                   vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
+
+    context->endOneTimeCommandBuffer(std::move(commandBuffer), VulkanContext::Queue::COMPUTE);
+
+    auto* data = static_cast<uint8_t*>(stagingBuffer->allocation_info.pMappedData);
+    return {data, data + byteSize};
+#else
+    return {};
+#endif
 }
 
 void Renderer::run() {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     while (running) {
         if (!window->tick()) {
             break;
@@ -445,6 +553,10 @@ void Renderer::run() {
 
         retrieveTimestamps();
     }
+#else
+    draw();
+    retrieveTimestamps();
+#endif
 
     context->device->waitIdle();
 }
@@ -565,12 +677,6 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     renderCommandBuffer->reset({});
     renderCommandBuffer->begin(vk::CommandBufferBeginInfo{});
 
-#ifdef VKGS_ENABLE_METAL
-    if (numInstances == 0 && __APPLE__) {
-        renderCommandBuffer->end();
-        return true;
-    }
-#endif
 
     vertexAttributeBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 
@@ -579,7 +685,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     preprocessSortPipeline->bind(renderCommandBuffer, 0, iters % 2 == 0 ? 0 : 1);
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                             queryManager->registerQuery("preprocess_sort_start"));
-    uint32_t tileX = (swapchain->swapchainExtent.width + 16 - 1) / 16;
+    uint32_t tileX = (getRenderExtent().width + 16 - 1) / 16;
     // assert(tileX == 50);
     renderCommandBuffer->pushConstants(preprocessSortPipeline->pipelineLayout.get(),
                                            vk::ShaderStageFlagBits::eCompute, 0,
@@ -654,17 +760,21 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     renderPipeline->bind(renderCommandBuffer, 0, std::vector<uint32_t>{0, currentImageIndex});
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                         queryManager->registerQuery("render_start"));
-    auto [width, height] = swapchain->swapchainExtent;
+    auto [width, height] = getRenderExtent();
     uint32_t constants[2] = {width, height};
     renderCommandBuffer->pushConstants(renderPipeline->pipelineLayout.get(),
                                        vk::ShaderStageFlagBits::eCompute, 0,
                                        sizeof(uint32_t) * 2, constants);
 
-    // image layout transition: undefined -> general
+    // image layout transition: render target -> general
     vk::ImageMemoryBarrier imageMemoryBarrier{};
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     imageMemoryBarrier.oldLayout = vk::ImageLayout::eUndefined;
+#else
+    imageMemoryBarrier.oldLayout = vk::ImageLayout::eGeneral;
+#endif
     imageMemoryBarrier.newLayout = vk::ImageLayout::eGeneral;
-    imageMemoryBarrier.image = swapchain->swapchainImages[currentImageIndex]->image;
+    imageMemoryBarrier.image = getCurrentRenderImage()->image;
     imageMemoryBarrier.subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
     imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eNoneKHR;
     imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
@@ -676,6 +786,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
 
     renderCommandBuffer->dispatch((width + 15) / 16, (height + 15) / 16, 1);
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     // image layout transition: general -> present
     imageMemoryBarrier.oldLayout = vk::ImageLayout::eGeneral;
     imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eShaderWrite;
@@ -695,9 +806,11 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
                                              vk::PipelineStageFlagBits::eBottomOfPipe,
                                              vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
     }
+#endif
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                         queryManager->registerQuery("render_end"));
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     if (configuration.enableGui) {
         imguiManager->draw(renderCommandBuffer.get(), currentImageIndex, std::bind(&GUIManager::buildGui, &guiManager));
 
@@ -711,6 +824,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
                                              vk::PipelineStageFlagBits::eComputeShader,
                                              vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
     }
+#endif
     renderCommandBuffer->end();
 
     return true;
@@ -718,7 +832,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
 
 void Renderer::updateUniforms() {
     UniformBuffer data{};
-    auto [width, height] = swapchain->swapchainExtent;
+    auto [width, height] = getRenderExtent();
     data.width = width;
     data.height = height;
     data.camera_position = glm::vec4(camera.position, 1.0f);

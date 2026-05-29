@@ -3,29 +3,41 @@ project(3dgs_cpp_root)
 
 include(FetchContent)
 
+set(VKGS_RENDER_MODE "ONSCREEN" CACHE STRING "Rendering mode: ONSCREEN or OFFSCREEN")
+set_property(CACHE VKGS_RENDER_MODE PROPERTY STRINGS ONSCREEN OFFSCREEN)
+if (NOT VKGS_RENDER_MODE STREQUAL "ONSCREEN" AND NOT VKGS_RENDER_MODE STREQUAL "OFFSCREEN")
+    message(FATAL_ERROR "VKGS_RENDER_MODE must be ONSCREEN or OFFSCREEN")
+endif ()
+
 set(CMAKE_CXX_STANDARD 20)
 
 find_package(Vulkan COMPONENTS glslangValidator)
 
-if (WIN32 OR APPLE)
-    FetchContent_Declare(
-            glfw
-            GIT_REPOSITORY https://github.com/glfw/glfw
-            GIT_TAG 3.3.9
-    )
+if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    if (WIN32)
+        FetchContent_Declare(
+                glfw
+                GIT_REPOSITORY https://github.com/glfw/glfw
+                GIT_TAG 3.3.9
+        )
 
-    FetchContent_GetProperties(glfw)
-    if (NOT glfw_POPULATED)
-        FetchContent_Populate(glfw)
+        FetchContent_GetProperties(glfw)
+        if (NOT glfw_POPULATED)
+            FetchContent_Populate(glfw)
 
-        set(GLFW_INSTALL OFF CACHE INTERNAL "Create GLFW installation target")
-        set(GLFW_BUILD_DOCS OFF CACHE INTERNAL "Build GLFW documentation")
-        set(GLFW_BUILD_TESTS OFF CACHE INTERNAL "Build GLFW test programs")
-        set(GLFW_BUILD_EXAMPLES OFF CACHE INTERNAL "Build GLFW examples")
+            set(GLFW_INSTALL OFF CACHE INTERNAL "Create GLFW installation target")
+            set(GLFW_BUILD_DOCS OFF CACHE INTERNAL "Build GLFW documentation")
+            set(GLFW_BUILD_TESTS OFF CACHE INTERNAL "Build GLFW test programs")
+            set(GLFW_BUILD_EXAMPLES OFF CACHE INTERNAL "Build GLFW examples")
 
-        add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR})
-    endif()
+            add_subdirectory(${glfw_SOURCE_DIR} ${glfw_BINARY_DIR})
+        endif()
+    else ()
+        find_package(glfw3 3.3 REQUIRED)
+    endif ()
+endif ()
 
+if (WIN32)
     set(GLM_ENABLE_CXX_20 ON CACHE INTERNAL "Enable experimental features")
 
     FetchContent_Declare(
@@ -39,15 +51,16 @@ if (WIN32 OR APPLE)
         SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:mainCRTStartup")
     endif ()
 else ()
-    find_package(glfw3 3.3 REQUIRED)
     find_package(glm REQUIRED)
 endif ()
 
-FetchContent_Declare(libenvpp
-        GIT_REPOSITORY https://github.com/ph3at/libenvpp.git
-        GIT_TAG v1.0.0
-)
-FetchContent_MakeAvailable(libenvpp)
+if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    FetchContent_Declare(libenvpp
+            GIT_REPOSITORY https://github.com/ph3at/libenvpp.git
+            GIT_TAG v1.0.0
+    )
+    FetchContent_MakeAvailable(libenvpp)
+endif ()
 
 FetchContent_Declare(spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -59,26 +72,20 @@ if (NOT spdlog_POPULATED)
     add_subdirectory(${spdlog_SOURCE_DIR} ${spdlog_BINARY_DIR})
 endif()
 
-FetchContent_Declare(imgui
-        GIT_REPOSITORY https://github.com/ocornut/imgui.git
-        GIT_TAG v1.90.3
-)
-FetchContent_MakeAvailable(imgui)
-
-if (APPLE)
-    add_compile_definitions(__APPLE__)
-
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-    set(CMAKE_INSTALL_RPATH "/usr/local/lib")
+if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    FetchContent_Declare(imgui
+            GIT_REPOSITORY https://github.com/ocornut/imgui.git
+            GIT_TAG v1.90.3
+    )
+    FetchContent_MakeAvailable(imgui)
 endif ()
+
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     add_compile_definitions(DEBUG)
 else ()
     add_compile_definitions(NDEBUG)
 endif ()
-
-add_compile_definitions(VKGS_ENABLE_GLFW)
 
 add_subdirectory(src)
 add_subdirectory(apps)

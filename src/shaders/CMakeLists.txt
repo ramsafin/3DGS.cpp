@@ -9,19 +9,14 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
         "*.comp"
 )
 
-if (CMAKE_BUILD_TYPE MATCHES Debug AND NOT APPLE)
+if (CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND GLSLC_DEFINE "-DDEBUG")
 else ()
     list(APPEND GLSLC_DEFINE "-DNDEBUG")
 endif ()
 
-if (APPLE)
-    # append -DAPPLE to GLSLC_DEFINE
-    list(APPEND GLSLC_DEFINE "-DAPPLE")
-endif ()
 
 set(SHADER_HEADER "${CMAKE_BINARY_DIR}/shaders/shaders.h")
-set(XCODE_SHADER "${CMAKE_SOURCE_DIR}/apps/apple/VulkanSplatting/shaders.h")
 
 message(STATUS "Shader header file: ${SHADER_HEADER}")
 
@@ -55,14 +50,3 @@ foreach (GLSL ${GLSL_SOURCE_FILES})
 endforeach (GLSL)
 
 add_custom_target(shaders DEPENDS ${SHADER_HEADER} ${SPIRV_BINARY_FILES})
-
-add_custom_target(xcode_shaders
-        DEPENDS
-        ${XCODE_SHADER}
-)
-
-add_custom_command(
-        OUTPUT ${XCODE_SHADER}
-        COMMAND ${CMAKE_COMMAND} -E copy ${SHADER_HEADER} ${XCODE_SHADER}
-        DEPENDS ${SHADER_HEADER}
-)

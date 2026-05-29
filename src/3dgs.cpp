@@ -8,12 +8,6 @@ std::shared_ptr<Window> VulkanSplatting::createGlfwWindow(std::string name, int 
 }
 #endif
 
-#ifdef VKGS_ENABLE_METAL
-#include "vulkan/windowing/MetalWindow.h"
-std::shared_ptr<Window> VulkanSplatting::createMetalWindow(void *caMetalLayer, int width, int height) {
-    return std::make_shared<MetalWindow>(caMetalLayer, width, height);
-}
-#endif
 
 void VulkanSplatting::start() {
     // Create the renderer
@@ -31,8 +25,14 @@ void VulkanSplatting::draw() {
     renderer->draw();
 }
 
+std::vector<uint8_t> VulkanSplatting::readPixels() {
+    return renderer->readPixels();
+}
+
 void VulkanSplatting::logTranslation(float x, float y) {
+#ifdef VKGS_RENDER_MODE_ONSCREEN
     configuration.window->logTranslation(x, y);
+#endif
 }
 
 void VulkanSplatting::logMovement(float x, float y, float z) {
