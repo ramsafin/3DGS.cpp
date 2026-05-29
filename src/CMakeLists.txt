@@ -37,6 +37,11 @@ add_library(3dgs_cpp STATIC
         ${EXTERNAL_SOURCE}
 )
 
+target_compile_definitions(3dgs_cpp PRIVATE
+  VULKAN_HPP_TYPESAFE_CONVERSION=1
+  VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+)
+
 if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
     target_compile_definitions(3dgs_cpp PUBLIC VKGS_RENDER_MODE_ONSCREEN VKGS_ENABLE_GLFW)
 else ()
