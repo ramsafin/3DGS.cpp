@@ -6,18 +6,13 @@ the [Vulkan API](https://www.khronos.org/vulkan/) and compute pipelines.
 
 **Why Vulkan?** We want to democratize the access to high-performance point-based radiance fields.
 Existing implementations of Gaussian Splatting are often limited to CUDA, which only runs on NVIDIA GPUs, 
-and OpenGL is deprecated on Apple platforms. Additionally, Vulkan's compute capabilities are the closest to CUDA's 
-with support for warp-level primitives (subgroups).
+while Vulkan's compute capabilities are the closest to CUDA's with support for warp-level primitives (subgroups).
 
 [![Windows + Linux](https://github.com/shg8/3DGS.cpp/actions/workflows/cmake-multi-platform.yml/badge.svg?branch=main)](https://github.com/shg8/3DGS.cpp/actions/workflows/cmake-multi-platform.yml)
 
-![3DGS.cpp Demo macOS](https://github.com/shg8/3DGS.cpp/assets/38004233/66542056-ce30-4998-a612-dd4f6792599e)
-
 ## Downloads
 * [Windows](https://github.com/shg8/3DGS.cpp/releases/download/nightly/3dgs_viewer-windows-latest-amd64-nightly)
-* [macOS (arm64)](https://github.com/shg8/3DGS.cpp/releases/download/nightly/3dgs_viewer-macos-14-arm64-nightly)
 * [Linux](https://github.com/shg8/3DGS.cpp/releases/download/nightly/3dgs_viewer-ubuntu-latest-amd64-nightly)
-* iOS, iPad OS, visionOS (as an iPad app) on [TestFlight](https://testflight.apple.com/join/0WzabeP7)
 
 ## Command Line Viewer
 
@@ -65,22 +60,9 @@ The command line viewer will be under `build/apps/viewer/`.
 After installing Vulkan SDK, set the `VULKAN_SDK` environmental variable to the install path. Alternatively,
 pass `-DVULKAN_SDK=\INSTALL\LOCATION\OF\YOUR\SDK` to CMake when configuring.
 
-### macOS
-After installing the [Vulkan SDK](https://www.lunarg.com/vulkan-sdk/), please proceed with CMake configuration and build steps.
-
-### iOS, iPadOS, visionOS
-1. Make sure that the Vulkan SDK is installed
-2. Run the `xcode_setup` CMake target
-3. Download the [prebuilt MoltenVK libraries](https://github.com/KhronosGroup/MoltenVK/actions) or build it yourself. Unzip the downloaded artifact from a MoltenVK workflow. If you're not sure which one you want to use, pick the one from the latest tag
-4. Place the MoltenVK folder that contains the `dynamic`, `include`, and `static` folders under `apps/apple`
-5. Set your development team id in `project.xcconfig`
-6. Profit
-
 ## TODO
 
 - [x] Better controls and GUI on GLFW
-- [x] Apps for iOS and visionOS
-- [ ] Fully immersive app on visionOS using the Compositor Service framework
 - [ ] OpenXR support
 - [ ] App for Android and Qualcomm Spaces
 - [ ] Implement SOTA parallel radix sort

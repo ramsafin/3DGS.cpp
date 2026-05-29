@@ -30,9 +30,6 @@ public:
     static std::shared_ptr<Window> createGlfwWindow(std::string name, int width, int height);
 #endif
 
-#ifdef VKGS_ENABLE_METAL
-    static std::shared_ptr<Window> createMetalWindow(void *caMetalLayer, int width, int height);
-#endif
 
     void start();
 

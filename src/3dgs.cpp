@@ -8,12 +8,6 @@ std::shared_ptr<Window> VulkanSplatting::createGlfwWindow(std::string name, int 
 }
 #endif
 
-#ifdef VKGS_ENABLE_METAL
-#include "vulkan/windowing/MetalWindow.h"
-std::shared_ptr<Window> VulkanSplatting::createMetalWindow(void *caMetalLayer, int width, int height) {
-    return std::make_shared<MetalWindow>(caMetalLayer, width, height);
-}
-#endif
 
 void VulkanSplatting::start() {
     // Create the renderer
