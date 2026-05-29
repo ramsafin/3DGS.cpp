@@ -176,7 +176,7 @@ VulkanContext::QueueFamilyIndices VulkanContext::findQueueFamilies() {
                 indices.presentFamily = i;
             }
         }
-        if (indices.isComplete()) {
+        if (indices.isComplete(surface.has_value())) {
             break;
         }
     }
@@ -200,9 +200,11 @@ void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeature
     QueueFamilyIndices indices = findQueueFamilies();
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {
-        indices.graphicsFamily.value(), indices.computeFamily.value(),
-        indices.presentFamily.value()
+        indices.graphicsFamily.value(), indices.computeFamily.value()
     };
+    if (indices.presentFamily.has_value()) {
+        uniqueQueueFamilies.insert(indices.presentFamily.value());
+    }
 
     float queuePriority = 1.0f;
     for (auto queueFamily: uniqueQueueFamilies) {
@@ -234,7 +236,7 @@ void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeature
         if (unique_queue_family == indices.computeFamily.value()) {
             types.insert(Queue::Type::COMPUTE);
         }
-        if (unique_queue_family == indices.presentFamily.value()) {
+        if (indices.presentFamily.has_value() && unique_queue_family == indices.presentFamily.value()) {
             types.insert(Queue::Type::PRESENT);
         }
 

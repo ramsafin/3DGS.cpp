@@ -4,6 +4,8 @@
 #include <optional>
 #include <string>
 #include <memory>
+#include <vector>
+#include <cstdint>
 
 class Window;
 class Renderer;
@@ -20,8 +22,12 @@ public:
         float near = 0.2f;
         float far = 1000.0f;
         bool enableGui = false;
+        uint32_t width = 1280;
+        uint32_t height = 720;
 
+#ifdef VKGS_RENDER_MODE_ONSCREEN
         std::shared_ptr<Window> window;
+#endif
     };
 
     explicit VulkanSplatting(RendererConfiguration configuration) : configuration(configuration) {}
@@ -36,6 +42,8 @@ public:
     void initialize();
 
     void draw();
+
+    std::vector<uint8_t> readPixels();
 
     void logTranslation(float x, float y);
 

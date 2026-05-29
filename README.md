@@ -55,6 +55,15 @@ cmake -DCMAKE_BUILD_TYPE=Release -S ./ -B ./build
 cmake --build ./build -j4
 ```
 The command line viewer will be under `build/apps/viewer/`.
+
+The build can be configured for either on-screen or off-screen rendering with `VKGS_RENDER_MODE`:
+
+```
+cmake -DCMAKE_BUILD_TYPE=Release -DVKGS_RENDER_MODE=ONSCREEN -S ./ -B ./build
+cmake -DCMAKE_BUILD_TYPE=Release -DVKGS_RENDER_MODE=OFFSCREEN -S ./ -B ./build-offscreen
+```
+
+`ONSCREEN` is the default and uses the GLFW window/swapchain path. `OFFSCREEN` builds the renderer without the GLFW viewer and renders into a Vulkan storage image that can be read back through the library API.
 ### Windows
 
 After installing Vulkan SDK, set the `VULKAN_SDK` environmental variable to the install path. Alternatively,

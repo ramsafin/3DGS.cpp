@@ -33,8 +33,9 @@ private:
         std::optional<uint32_t> computeFamily;
         std::optional<uint32_t> presentFamily;
 
-        bool isComplete() {
-            return graphicsFamily.has_value() && computeFamily.has_value() && presentFamily.has_value();
+        bool isComplete(bool requirePresent) const {
+            return graphicsFamily.has_value() && computeFamily.has_value() &&
+                   (!requirePresent || presentFamily.has_value());
         }
     };
 
