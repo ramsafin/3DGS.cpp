@@ -41,3 +41,5 @@ apps/apple/VulkanSplatting/ThirdParty
 xcuserdata/
 
 project.xcconfig
+
+build/
