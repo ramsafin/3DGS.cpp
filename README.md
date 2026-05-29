@@ -63,7 +63,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -DVKGS_RENDER_MODE=ONSCREEN -S ./ -B ./build
 cmake -DCMAKE_BUILD_TYPE=Release -DVKGS_RENDER_MODE=OFFSCREEN -S ./ -B ./build-offscreen
 ```
 
-`ONSCREEN` is the default and uses the GLFW window/swapchain path. `OFFSCREEN` builds the renderer without the GLFW viewer and renders into a Vulkan storage image that can be read back through the library API.
+`ONSCREEN` is the default and uses the GLFW window/swapchain path. `OFFSCREEN` builds the `3dgs_render` executable under `build-offscreen/apps/offscreen/`; it renders camera poses from a JSON config into a Vulkan storage image and writes PPM files. See `apps/offscreen/README.md` for the config format.
 ### Windows
 
 After installing Vulkan SDK, set the `VULKAN_SDK` environmental variable to the install path. Alternatively,

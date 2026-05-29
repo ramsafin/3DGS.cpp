@@ -45,6 +45,10 @@ public:
 
     std::vector<uint8_t> readPixels();
 
+    void setCameraPose(float px, float py, float pz, float qw, float qx, float qy, float qz);
+
+    void setCameraProjection(float fovDegrees, float nearPlane, float farPlane);
+
     void logTranslation(float x, float y);
 
     void logMovement(float x, float y, float z);

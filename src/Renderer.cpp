@@ -215,6 +215,20 @@ void Renderer::createPreprocessPipeline() {
 }
 
 Renderer::Renderer(VulkanSplatting::RendererConfiguration configuration) : configuration(std::move(configuration)) {
+    camera.fov = this->configuration.fov;
+    camera.nearPlane = this->configuration.near;
+    camera.farPlane = this->configuration.far;
+}
+
+void Renderer::setCameraPose(float px, float py, float pz, float qw, float qx, float qy, float qz) {
+    camera.position = glm::vec3(px, py, pz);
+    camera.rotation = glm::normalize(glm::quat(qw, qx, qy, qz));
+}
+
+void Renderer::setCameraProjection(float fovDegrees, float nearPlane, float farPlane) {
+    camera.fov = fovDegrees;
+    camera.nearPlane = nearPlane;
+    camera.farPlane = farPlane;
 }
 
 void Renderer::createGui() {
