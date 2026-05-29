@@ -26,6 +26,11 @@ add_library(3dgs_cpp STATIC
         ${EXTERNAL_SOURCE}
 )
 
+target_compile_definitions(3dgs_cpp PRIVATE
+  VULKAN_HPP_TYPESAFE_CONVERSION=1
+  VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+)
+
 target_include_directories(3dgs_cpp
         PUBLIC
         ${CMAKE_SOURCE_DIR}/include/3dgs
