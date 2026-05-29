@@ -133,10 +133,8 @@ void Renderer::initializeVulkan() {
     pdf.shaderInt64 = true;
     // pdf.robustBufferAccess = true;
     // pdf12.shaderFloat16 = true;]
-#ifndef __APPLE__
     pdf12.shaderBufferInt64Atomics = true;
     pdf12.shaderSharedInt64Atomics = true;
-#endif
 
     context->createLogicalDevice(pdf, pdf11, pdf12);
     context->createDescriptorPool(1);
@@ -565,12 +563,6 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     renderCommandBuffer->reset({});
     renderCommandBuffer->begin(vk::CommandBufferBeginInfo{});
 
-#ifdef VKGS_ENABLE_METAL
-    if (numInstances == 0 && __APPLE__) {
-        renderCommandBuffer->end();
-        return true;
-    }
-#endif
 
     vertexAttributeBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 

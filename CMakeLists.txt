@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(Vulkan COMPONENTS glslangValidator)
 
-if (WIN32 OR APPLE)
+if (WIN32)
     FetchContent_Declare(
             glfw
             GIT_REPOSITORY https://github.com/glfw/glfw
@@ -65,12 +65,6 @@ FetchContent_Declare(imgui
 )
 FetchContent_MakeAvailable(imgui)
 
-if (APPLE)
-    add_compile_definitions(__APPLE__)
-
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-    set(CMAKE_INSTALL_RPATH "/usr/local/lib")
-endif ()
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     add_compile_definitions(DEBUG)
@@ -78,7 +72,9 @@ else ()
     add_compile_definitions(NDEBUG)
 endif ()
 
-add_compile_definitions(VKGS_ENABLE_GLFW)
+if (WIN32 OR UNIX)
+    add_compile_definitions(VKGS_ENABLE_GLFW)
+endif ()
 
 add_subdirectory(src)
 add_subdirectory(apps)
