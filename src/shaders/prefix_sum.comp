@@ -2,10 +2,6 @@
 #extension GL_GOOGLE_include_directive : enable
 #include "./common.glsl"
 
-#ifdef DEBUG
-#extension GL_EXT_debug_printf : enable
-#endif
-
 layout (std430, set = 0, binding = 0) buffer In {
     uint src[];
 };
@@ -50,10 +46,4 @@ void main() {
             src[index] = dst[index] + dst[index2];
         }
     }
-
-    #ifdef DEBUG
-    if (index == 0) {
-//        debugPrintfEXT("timestep: %d\n", timestep);
-    }
-    #endif
 }

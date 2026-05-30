@@ -1,18 +1,19 @@
-#include <fstream>
-#include <utility>
 #include "Utils.h"
 
 #include "Buffer.h"
 
-std::vector<char *> Utils::stringVectorToCharPtrVector(const std::vector<std::string>&stringVector) {
-    std::vector<char *> charPtrVector;
-    for (auto&string: stringVector) {
-        charPtrVector.push_back(const_cast<char *>(string.c_str()));
+#include <fstream>
+#include <utility>
+
+std::vector<char*> Utils::stringVectorToCharPtrVector(const std::vector<std::string>& stringVector) {
+    std::vector<char*> charPtrVector;
+    for (auto& string : stringVector) {
+        charPtrVector.push_back(const_cast<char*>(string.c_str()));
     }
     return charPtrVector;
 }
 
-std::vector<char> Utils::readFile(const std::string&path) {
+std::vector<char> Utils::readFile(const std::string& path) {
     std::vector<char> result;
     std::ifstream file(path, std::ios::binary);
     if (!file) {
@@ -36,22 +37,20 @@ Utils::BarrierBuilder& Utils::BarrierBuilder::queueFamilyIndex(uint32_t queueFam
     return *this;
 }
 
-Utils::BarrierBuilder& Utils::BarrierBuilder::addBufferBarrier(const std::shared_ptr<Buffer>&buffer,
+Utils::BarrierBuilder& Utils::BarrierBuilder::addBufferBarrier(const std::shared_ptr<Buffer>& buffer,
                                                                const vk::AccessFlags srcAccessMask,
                                                                const vk::AccessFlags dstAccessMask,
                                                                const uint32_t srcQueueFamilyIndex,
                                                                const uint32_t dstQueueFamilyIndex) {
-    bufferMemoryBarriers.emplace_back(srcAccessMask, dstAccessMask, srcQueueFamilyIndex,
-                                                              dstQueueFamilyIndex, buffer->buffer, 0,
-                                                              buffer->size);
+    bufferMemoryBarriers.emplace_back(srcAccessMask, dstAccessMask, srcQueueFamilyIndex, dstQueueFamilyIndex,
+                                      buffer->buffer, 0, buffer->size);
     return *this;
 }
 
-Utils::BarrierBuilder& Utils::BarrierBuilder::addBufferBarrier(const std::shared_ptr<Buffer>&buffer,
+Utils::BarrierBuilder& Utils::BarrierBuilder::addBufferBarrier(const std::shared_ptr<Buffer>& buffer,
                                                                const vk::AccessFlags srcAccessMask,
                                                                const vk::AccessFlags dstAccessMask) {
-    return addBufferBarrier(buffer, srcAccessMask, dstAccessMask, _srcQueueFamilyIndex,
-                            _dstQueueFamilyIndex);
+    return addBufferBarrier(buffer, srcAccessMask, dstAccessMask, _srcQueueFamilyIndex, _dstQueueFamilyIndex);
 }
 
 Utils::BarrierBuilder& Utils::BarrierBuilder::srcQueueFamilyIndex(uint32_t srcQueueFamilyIndex) {

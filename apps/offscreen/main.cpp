@@ -1,19 +1,17 @@
+#include <3dgs/3dgs.h>
 #include <array>
-#include <cstdlib>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <optional>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
-
-#include "3dgs.h"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -27,7 +25,8 @@ struct CliOptions {
 };
 
 void printUsage(const char* program) {
-    std::cout << "Usage: " << program << " --config <render.json> [--output <dir>] [--device <id>] [--validation] [--verbose]\n";
+    std::cout << "Usage: " << program
+              << " --config <render.json> [--output <dir>] [--device <id>] [--validation] [--verbose]\n";
 }
 
 CliOptions parseCli(int argc, char** argv) {
@@ -181,12 +180,16 @@ int main(int argc, char** argv) {
 
         const uint32_t width = render.value("width", 1280u);
         const uint32_t height = render.value("height", 720u);
+        if (width == 0 || height == 0) {
+            throw std::runtime_error("render.width and render.height must be positive");
+        }
         const std::string outputFormat = output.value("format", "ppm");
         if (outputFormat != "ppm") {
             throw std::runtime_error("Only ppm output is currently supported");
         }
 
-        fs::path outputDirectory = cli.outputDirectory.value_or(resolvePath(configBase, output.value("directory", "renders")));
+        fs::path outputDirectory =
+            cli.outputDirectory.value_or(resolvePath(configBase, output.value("directory", "renders")));
         fs::create_directories(outputDirectory);
 
         VulkanSplatting::RendererConfiguration rendererConfig{};
@@ -222,7 +225,8 @@ int main(int argc, char** argv) {
                                          frame.value("near", rendererConfig.near),
                                          frame.value("far", rendererConfig.far));
 
-            renderer.setCameraPose(position[0], position[1], position[2], rotation[0], rotation[1], rotation[2], rotation[3]);
+            renderer.setCameraPose(position[0], position[1], position[2], rotation[0], rotation[1], rotation[2],
+                                   rotation[3]);
             renderer.draw();
             auto pixels = renderer.readPixels();
 

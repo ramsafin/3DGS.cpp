@@ -1,17 +1,17 @@
 #ifndef VULKANSPLATTING_H
 #define VULKANSPLATTING_H
 
+#include <cstdint>
+#include <memory>
 #include <optional>
 #include <string>
-#include <memory>
 #include <vector>
-#include <cstdint>
 
 class Window;
 class Renderer;
 
 class VulkanSplatting {
-public:
+  public:
     struct RendererConfiguration {
         bool enableVulkanValidationLayers = false;
         std::optional<uint8_t> physicalDeviceId = std::nullopt;
@@ -36,7 +36,6 @@ public:
     static std::shared_ptr<Window> createGlfwWindow(std::string name, int width, int height);
 #endif
 
-
     void start();
 
     void initialize();
@@ -54,9 +53,10 @@ public:
     void logMovement(float x, float y, float z);
 
     void stop();
-private:
+
+  private:
     RendererConfiguration configuration;
     std::shared_ptr<Renderer> renderer;
 };
 
-#endif //VULKANSPLATTING_H
+#endif // VULKANSPLATTING_H

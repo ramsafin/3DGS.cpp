@@ -1,11 +1,18 @@
 #include "QueryManager.h"
 
-#include <functional>
-#include <iostream>
+#include <stdexcept>
+
+void QueryManager::setCapacity(uint32_t capacity) {
+    std::lock_guard<std::mutex> lock(mutex);
+    this->capacity = capacity;
+}
 
 uint32_t QueryManager::registerQuery(const std::string& name) {
     std::lock_guard<std::mutex> lock(mutex);
     if (!registry.contains(name)) {
+        if (capacity != 0 && static_cast<uint32_t>(nextId) >= capacity) {
+            throw std::runtime_error("QueryManager exceeded timestamp query pool capacity");
+        }
         registry[name] = nextId++;
     }
     return registry[name];
@@ -20,10 +27,6 @@ uint32_t QueryManager::getQueryId(const std::string& name) {
 }
 
 std::unordered_map<std::string, uint64_t> QueryManager::parseResults(const std::vector<uint64_t>& results) {
-    // all names end with _start or _end
-    // calculate the time between the two
-    // push the results to the results map
-    // print every 1 seconds
     std::lock_guard<std::mutex> lock(mutex);
     std::unordered_map<std::string, uint64_t> resultsMap;
     for (auto& [name, id] : registry) {
@@ -39,18 +42,4 @@ std::unordered_map<std::string, uint64_t> QueryManager::parseResults(const std::
         }
     }
     return resultsMap;
-    // auto now = std::chrono::high_resolution_clock::now();
-    // if (now - lastPrint > std::chrono::seconds(1)) {
-    //     lastPrint = now;
-    //     for (auto& [name, result] : this->results) {
-    //         auto truncated = name.substr(0, name.size() - 6);
-    //         std::cout << truncated << ": ";
-    //         // calculate average
-    //         uint64_t sum = 0;
-    //         for (auto& r : result) {
-    //             sum += r;
-    //         }
-    //         std::cout << sum / result.size() / 1000000.0 << "ms" << std::endl;
-    //     }
-    // }
 }

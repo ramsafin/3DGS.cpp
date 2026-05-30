@@ -1,46 +1,25 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
+# Local scenes and renderer output
 scenes/
-
-apps/apple/VulkanSplatting/shaders.h
-apps/apple/MoltenVK
-apps/apple/VulkanSplatting/ThirdParty
-
-# xcuserdata under any directory is ignored
-xcuserdata/
-
-project.xcconfig
-
-build/
+renders/
 imgui.ini
+
+# Build trees: includes CMake, Ninja, MSVC, fetched dependencies, and generated shaders
+build/
+out/
+cmake-build-*/
+
+# Local CMake preset overrides
+CMakeUserPresets.json
+
+# IDE state
+.vs/
+.idea/
+.vscode/*.local.json
+*.code-workspace
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

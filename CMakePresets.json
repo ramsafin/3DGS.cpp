@@ -1,0 +1,142 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "FETCHCONTENT_QUIET": "ON",
+        "VKGS_VERBOSE_CONFIGURE": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
+        "VKGS_BUILD_APPS": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-onscreen-debug",
+      "displayName": "Windows MSVC On-screen Debug",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VKGS_RENDER_MODE": "ONSCREEN"
+      }
+    },
+    {
+      "name": "windows-msvc-onscreen-release",
+      "displayName": "Windows MSVC On-screen Release",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VKGS_RENDER_MODE": "ONSCREEN"
+      }
+    },
+    {
+      "name": "windows-msvc-offscreen-debug",
+      "displayName": "Windows MSVC Off-screen Debug",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VKGS_RENDER_MODE": "OFFSCREEN",
+        "VKGS_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-offscreen-release",
+      "displayName": "Windows MSVC Off-screen Release",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VKGS_RENDER_MODE": "OFFSCREEN"
+      }
+    },
+    {
+      "name": "ohos-arm64-base",
+      "hidden": true,
+      "inherits": "base",
+      "toolchainFile": "$env{OHOS_SDK_NATIVE}/build/cmake/ohos.toolchain.cmake",
+      "cacheVariables": {
+        "OHOS_ARCH": "arm64-v8a",
+        "OHOS_STL": "c++_shared",
+        "VKGS_BUILD_APPS": "OFF",
+        "VKGS_RENDER_MODE": "OFFSCREEN"
+      }
+    },
+    {
+      "name": "ohos-arm64-core-debug",
+      "displayName": "OHOS arm64 Core Debug",
+      "inherits": "ohos-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "ohos-arm64-core-release",
+      "displayName": "OHOS arm64 Core Release",
+      "inherits": "ohos-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-onscreen-debug",
+      "configurePreset": "windows-msvc-onscreen-debug"
+    },
+    {
+      "name": "windows-msvc-onscreen-release",
+      "configurePreset": "windows-msvc-onscreen-release"
+    },
+    {
+      "name": "windows-msvc-offscreen-debug",
+      "configurePreset": "windows-msvc-offscreen-debug"
+    },
+    {
+      "name": "windows-msvc-offscreen-release",
+      "configurePreset": "windows-msvc-offscreen-release"
+    },
+    {
+      "name": "ohos-arm64-core-debug",
+      "configurePreset": "ohos-arm64-core-debug",
+      "targets": [
+        "3dgs_cpp"
+      ]
+    },
+    {
+      "name": "ohos-arm64-core-release",
+      "configurePreset": "ohos-arm64-core-release",
+      "targets": [
+        "3dgs_cpp"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "windows-msvc-offscreen-debug",
+      "configurePreset": "windows-msvc-offscreen-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

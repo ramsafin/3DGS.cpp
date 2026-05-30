@@ -1,6 +1,8 @@
-#define TILE_WIDTH 16
-#define TILE_HEIGHT 16
-#define SH_MAX_COEFFS 48
+#include "shared_constants.glsl"
+
+#define TILE_WIDTH VKGS_TILE_WIDTH
+#define TILE_HEIGHT VKGS_TILE_HEIGHT
+#define SH_MAX_COEFFS VKGS_SH_MAX_COEFFS
 
 #ifdef DEBUG
 #extension GL_EXT_debug_printf : enable

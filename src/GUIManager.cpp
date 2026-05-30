@@ -1,9 +1,9 @@
 #include "GUIManager.h"
 
-#include <iostream>
-
 #include "imgui.h"
 #include "implot/implot.h"
+
+#include <iostream>
 
 struct ScrollingBuffer {
     int maxSize;
@@ -11,21 +11,21 @@ struct ScrollingBuffer {
     ImVector<ImVec2> data;
     explicit ScrollingBuffer(const int max_size = 10000) {
         maxSize = max_size;
-        offset  = 0;
+        offset = 0;
         data.reserve(maxSize);
     }
     void addPoint(float x, float y) {
         if (data.size() < maxSize)
-            data.push_back(ImVec2(x,y));
+            data.push_back(ImVec2(x, y));
         else {
-            data[offset] = ImVec2(x,y);
-            offset =  (offset + 1) % maxSize;
+            data[offset] = ImVec2(x, y);
+            offset = (offset + 1) % maxSize;
         }
     }
     void clear() {
         if (data.size() > 0) {
             data.shrink(0);
-            offset  = 0;
+            offset = 0;
         }
     }
 };
@@ -60,7 +60,7 @@ void GUIManager::buildGui() {
         ImPlot::SetupAxisLimits(ImAxis_X1, t - history, t, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_Y1, 0, 1);
         ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
-        for (auto& [name, values]: *metricsMap) {
+        for (auto& [name, values] : *metricsMap) {
             if (!values.data.empty()) {
                 ImPlot::PlotLine(name.c_str(), &values.data[0].x, &values.data[0].y, values.data.size(), 0,
                                  values.offset, 2 * sizeof(float));
@@ -76,10 +76,10 @@ void GUIManager::buildGui() {
     bool popen = true;
     ImGui::SetNextWindowPos(ImVec2(10, 270), ImGuiCond_FirstUseEver);
     ImGui::Begin("Metrics", &popen, ImGuiWindowFlags_AlwaysAutoResize);
-    for (auto& [name, value]: *textMetricsMap) {
+    for (auto& [name, value] : *textMetricsMap) {
         ImGui::Text("%s: %.2f", name.c_str(), value);
     }
-    for (auto & [name, values]: *metricsMap) {
+    for (auto& [name, values] : *metricsMap) {
         ImGui::Text("%s: %.2f", name.c_str(), values.data.empty() ? 0 : values.data.back().y);
     }
     ImGui::End();
@@ -116,7 +116,7 @@ void GUIManager::pushMetric(const std::string& name, float value) {
 }
 
 void GUIManager::pushMetric(const std::unordered_map<std::string, float>& name) {
-    for (auto& [n, v]: name) {
+    for (auto& [n, v] : name) {
         pushMetric(n, v);
     }
 }

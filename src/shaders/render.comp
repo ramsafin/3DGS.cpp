@@ -3,7 +3,6 @@
 #include "./common.glsl"
 
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
-//#extension GL_EXT_shader_explicit_arithmetic_types_float16 : enable
 
 layout (std430, set = 0, binding = 0) readonly buffer Vertices {
     VertexAttribute attr[];
@@ -46,18 +45,6 @@ void main() {
     float T = 1.0f;
     vec3 c = vec3(0.0f);
 
-    if (gl_GlobalInvocationID.x == 10000) {
-//        debugPrintfEXT("c %f %f %f\n", attr[vertex_key].color_radii.x, attr[vertex_key].color_radii.y, attr[vertex_key].color_radii.z);
-//        debugPrintfEXT("uv %d %d\n", attr[vertex_key].uv.x, attr[vertex_key].uv.y);
-//        debugPrintfEXT("curr_uv %d %d\n", curr_uv.x, curr_uv.y);
-//        debugPrintfEXT("co %f %f %f %f\n", attr[vertex_key].conic_opacity.x, attr[vertex_key].conic_opacity.y, attr[vertex_key].conic_opacity.z, attr[vertex_key].conic_opacity.w);
-    }
-
-    if (start > end && gl_LocalInvocationIndex == 0) {
-//        debugPrintfEXT("ERROR ----- start %d end %d at %d (TX %d TY %d wid %d)\n", start, end, tileX + tileY * tiles_width, tileX, tileY, tiles_width);
-//        debugPrintfEXT("      ----- %d %d %d %d\n", boundaries[tileX + tileY * tiles_width - 2], boundaries[tileX + tileY * tiles_width - 1], boundaries[tileX + tileY * tiles_width + 2], boundaries[tileX + tileY * tiles_width + 3]);
-    }
-
     for (uint i = start; i < end; i++) {
         uint vertex_key = sorted_vertices[i];
         vec2 uv = attr[vertex_key].uv;
@@ -68,11 +55,6 @@ void main() {
         if (power > 0.0f) {
             continue;
         }
-
-        if (gl_GlobalInvocationID.x == 100) {
-//            debugPrintfEXT("radius %f\n", attr[vertex_key].color_radii.w);
-        }
-
 
         float alpha = min(0.99f, co.w * exp(power));
         if (alpha < 1.0f / 255.0f) {
@@ -88,12 +70,5 @@ void main() {
         T = test_T;
     }
 
-//    if (index == 10000) {
-//        debugPrintfEXT("c %f %f %f\n", c.x, c.y, c.z);
-//    }
-
-    // set pixel to red
-//    ivec2 pixel_coords = ivec2(curr_uv);
-//    imageStore(output_image, ivec2(curr_uv), vec4(1.0, 0.0, 0.0, 1.0));
     imageStore(output_image, ivec2(curr_uv), vec4(c, 1.0f));
 }

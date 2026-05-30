@@ -1,5 +1,5 @@
 {
-  "scene": "scene.ply",
+  "scene": "D:/3DGS/scenes/models/bicycle/point_cloud/iteration_30000/point_cloud.ply",
   "output": {
     "directory": "renders",
     "filename_pattern": "frame_%04d.ppm",

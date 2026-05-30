@@ -1,12 +1,12 @@
 #ifndef GUIMANAGER_H
 #define GUIMANAGER_H
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
-#include <memory>
 
 class GUIManager {
-public:
+  public:
     GUIManager();
 
     static void init();
@@ -24,7 +24,6 @@ public:
     static bool wantCaptureKeyboard();
 
     bool mouseCapture = false;
-
 };
 
-#endif //GUIMANAGER_H
+#endif // GUIMANAGER_H

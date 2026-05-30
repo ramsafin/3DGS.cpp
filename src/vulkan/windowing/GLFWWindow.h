@@ -1,11 +1,16 @@
 #ifndef GLFWWINDOW_H
 #define GLFWWINDOW_H
 
-#include "../Window.h"
+#include "vulkan/Window.h"
 
 class GLFWWindow final : public Window {
-public:
+  public:
     GLFWWindow(std::string name, int width, int height);
+
+    ~GLFWWindow() override;
+
+    GLFWWindow(const GLFWWindow&) = delete;
+    GLFWWindow& operator=(const GLFWWindow&) = delete;
 
     VkSurfaceKHR createSurface(std::shared_ptr<VulkanContext> context) override;
 
@@ -25,12 +30,11 @@ public:
 
     void* window;
 
-private:
+  private:
     VkSurfaceKHR surface = VK_NULL_HANDLE;
 
     double lastX = 0.0;
     double lastY = 0.0;
 };
 
-
-#endif //GLFWWINDOW_H
+#endif // GLFWWINDOW_H

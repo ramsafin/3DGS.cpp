@@ -1,14 +1,14 @@
 #ifndef VULKAN_SPLATTING_PIPELINE_H
 #define VULKAN_SPLATTING_PIPELINE_H
 
+#include "vulkan/DescriptorSet.h"
+#include "vulkan/VulkanContext.h"
 
-#include <memory>
 #include <map>
-#include "../VulkanContext.h"
-#include "../DescriptorSet.h"
+#include <memory>
 
 class Pipeline {
-public:
+  public:
     struct DescriptorOption {
         bool multiple;
         uint32_t value;
@@ -23,13 +23,13 @@ public:
 
     explicit Pipeline(const std::shared_ptr<VulkanContext>& context);
 
-    Pipeline(const Pipeline &) = delete;
+    Pipeline(const Pipeline&) = delete;
 
-    Pipeline(Pipeline &&) = delete;
+    Pipeline(Pipeline&&) = delete;
 
-    Pipeline &operator=(const Pipeline &) = delete;
+    Pipeline& operator=(const Pipeline&) = delete;
 
-    Pipeline &operator=(Pipeline &&) = delete;
+    Pipeline& operator=(Pipeline&&) = delete;
 
     void addDescriptorSet(uint32_t set, std::shared_ptr<DescriptorSet> descriptorSet);
 
@@ -37,11 +37,12 @@ public:
 
     virtual void build() = 0;
 
-    virtual void bind(const vk::UniqueCommandBuffer &commandBuffer, uint8_t currentFrame, DescriptorOption option);
+    virtual void bind(const vk::UniqueCommandBuffer& commandBuffer, uint8_t currentFrame, DescriptorOption option);
 
     vk::UniquePipelineLayout pipelineLayout;
     vk::UniquePipeline pipeline;
-protected:
+
+  protected:
     void buildPipelineLayout();
 
     std::shared_ptr<VulkanContext> context;
@@ -51,5 +52,4 @@ protected:
     std::map<uint32_t, std::shared_ptr<DescriptorSet>> descriptorSets;
 };
 
-
-#endif //VULKAN_SPLATTING_PIPELINE_H
+#endif // VULKAN_SPLATTING_PIPELINE_H

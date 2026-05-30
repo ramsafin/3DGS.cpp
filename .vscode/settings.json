@@ -1,0 +1,25 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnEdit": false,
+  "cmake.configureOnOpen": false,
+  "cmake.copyCompileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build",
+    "--background-index",
+    "--clang-tidy",
+    "--header-insertion=never"
+  ],
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.formatOnSave": true
+  },
+  "[c]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.formatOnSave": true
+  },
+  "files.associations": {
+    "*.comp": "glsl",
+    "*.glsl": "glsl"
+  }
+}

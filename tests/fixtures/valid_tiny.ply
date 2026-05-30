@@ -1,0 +1,14 @@
+ply
+format binary_little_endian 1.0
+element vertex 3
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property float f_dc_0
+property float opacity
+property float scale_0
+property float rot_0
+end_header

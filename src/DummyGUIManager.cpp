@@ -2,29 +2,17 @@
 
 #include <iostream>
 
-GUIManager::GUIManager() {
+GUIManager::GUIManager() {}
 
-}
+void GUIManager::init() {}
 
-void GUIManager::init() {
+void GUIManager::buildGui() {}
 
-}
+void GUIManager::pushTextMetric(const std::string& name, float value) {}
 
-void GUIManager::buildGui() {
+void GUIManager::pushMetric(const std::string& name, float value) {}
 
-}
-
-void GUIManager::pushTextMetric(const std::string& name, float value) {
-
-}
-
-void GUIManager::pushMetric(const std::string& name, float value) {
-
-}
-
-void GUIManager::pushMetric(const std::unordered_map<std::string, float>& name) {
-
-}
+void GUIManager::pushMetric(const std::unordered_map<std::string, float>& name) {}
 
 bool GUIManager::wantCaptureMouse() {
     return false;

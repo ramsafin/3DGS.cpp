@@ -29,11 +29,8 @@ OffscreenRenderTarget::OffscreenRenderTarget(std::shared_ptr<VulkanContext> cont
     }
     image = vk::Image(vkImage);
 
-    auto imageView = this->context->device->createImageViewUnique({
-        {}, image, vk::ImageViewType::e2D,
-        format, {},
-        {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-    });
+    auto imageView = this->context->device->createImageViewUnique(
+        {{}, image, vk::ImageViewType::e2D, format, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
 
     images.push_back(std::make_shared<Image>(image, std::move(imageView), format, extent, std::nullopt));
 
@@ -47,8 +44,7 @@ OffscreenRenderTarget::OffscreenRenderTarget(std::shared_ptr<VulkanContext> cont
     imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
     imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                                   vk::PipelineStageFlagBits::eComputeShader,
+    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eComputeShader,
                                    vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
     this->context->endOneTimeCommandBuffer(std::move(commandBuffer), VulkanContext::Queue::COMPUTE);
 }

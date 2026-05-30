@@ -1,14 +1,14 @@
 #ifndef VULKAN_SPLATTING_SWAPCHAIN_H
 #define VULKAN_SPLATTING_SWAPCHAIN_H
 
-
-#include <memory>
 #include "VulkanContext.h"
 #include "Window.h"
 
+#include <memory>
+
 class Swapchain {
-public:
-    Swapchain(const std::shared_ptr<VulkanContext> &context, const std::shared_ptr<Window> &window, bool immediate);
+  public:
+    Swapchain(const std::shared_ptr<VulkanContext>& context, const std::shared_ptr<Window>& window, bool immediate);
 
     vk::UniqueSwapchainKHR swapchain;
     vk::Extent2D swapchainExtent;
@@ -20,7 +20,8 @@ public:
     uint32_t imageCount;
 
     void recreate();
-private:
+
+  private:
     std::shared_ptr<VulkanContext> context;
     std::shared_ptr<Window> window;
 
@@ -31,5 +32,4 @@ private:
     void createSwapchainImages();
 };
 
-
-#endif //VULKAN_SPLATTING_SWAPCHAIN_H
+#endif // VULKAN_SPLATTING_SWAPCHAIN_H

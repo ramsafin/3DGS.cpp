@@ -3,11 +3,15 @@
 
 #define FRAMES_IN_FLIGHT 1
 
+#include "vk_mem_alloc.h"
+
+#include <cstdint>
 #include <optional>
 #include <set>
+#include <string>
 #include <unordered_map>
+#include <vector>
 #include <vulkan/vulkan.hpp>
-#include "vk_mem_alloc.h"
 
 struct Image {
     vk::Image image;
@@ -16,18 +20,14 @@ struct Image {
     vk::Extent2D extent;
     std::optional<vk::UniqueFramebuffer> framebuffer;
 
-    Image(const vk::Image &image, vk::UniqueImageView &&image_view, vk::Format format,
-          const vk::Extent2D &extent, std::optional<vk::UniqueFramebuffer> &&framebuffer = std::nullopt)
-            : image(image),
-              imageView(std::move(image_view)),
-              format(format),
-              extent(extent),
-              framebuffer(std::move(framebuffer)) {
-    }
+    Image(const vk::Image& image, vk::UniqueImageView&& image_view, vk::Format format, const vk::Extent2D& extent,
+          std::optional<vk::UniqueFramebuffer>&& framebuffer = std::nullopt)
+        : image(image), imageView(std::move(image_view)), format(format), extent(extent),
+          framebuffer(std::move(framebuffer)) {}
 };
 
 class VulkanContext {
-private:
+  private:
     struct QueueFamilyIndices {
         std::optional<uint32_t> graphicsFamily;
         std::optional<uint32_t> computeFamily;
@@ -39,13 +39,14 @@ private:
         }
     };
 
-public:
+  public:
+    // Number of timestamp queries the timestamp pool can hold. Centralized so
+    // the pool size, the reset ranges, and the QueryManager id allocator stay in
+    // agreement (VKGS-026).
+    static constexpr uint32_t kTimestampQueryCount = 20;
+
     struct Queue {
-        enum Type {
-            GRAPHICS,
-            COMPUTE,
-            PRESENT
-        };
+        enum Type { GRAPHICS, COMPUTE, PRESENT };
 
         std::set<Type> types;
         uint32_t queueFamily;
@@ -53,20 +54,23 @@ public:
         vk::Queue queue;
     };
 
-    VulkanContext(const std::vector<std::string> &instance_extensions,
-                  const std::vector<std::string> &device_extensions, bool validation_layers_enabled);
+    VulkanContext(const std::vector<std::string>& instance_extensions,
+                  const std::vector<std::string>& device_extensions, bool validation_layers_enabled);
 
-    VulkanContext(const VulkanContext &) = delete;
+    VulkanContext(const VulkanContext&) = delete;
 
-    VulkanContext(VulkanContext &&) = delete;
+    VulkanContext(VulkanContext&&) = delete;
 
-    VulkanContext &operator=(const VulkanContext &) = delete;
+    VulkanContext& operator=(const VulkanContext&) = delete;
 
-    VulkanContext &operator=(VulkanContext &&) = delete;
+    VulkanContext& operator=(VulkanContext&&) = delete;
 
     void createInstance();
 
     bool isDeviceSuitable(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface = std::nullopt);
+
+    std::vector<std::string> getDeviceUnsuitabilityReasons(vk::PhysicalDevice device,
+                                                           std::optional<vk::SurfaceKHR> surface = std::nullopt) const;
 
     void selectPhysicalDevice(std::optional<uint8_t> id = std::nullopt,
                               std::optional<vk::SurfaceKHR> surface = std::nullopt);
@@ -75,13 +79,15 @@ public:
 
     void createQueryPool();
 
-    void createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeatures, vk::PhysicalDeviceVulkan11Features deviceFeatures11, vk::PhysicalDeviceVulkan12Features deviceFeatures12);
+    void createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeatures,
+                             vk::PhysicalDeviceVulkan11Features deviceFeatures11,
+                             vk::PhysicalDeviceVulkan12Features deviceFeatures12);
 
     void createDescriptorPool(uint8_t framesInFlight);
 
-    vk::UniqueCommandBuffer beginOneTimeCommandBuffer();
+    vk::UniqueCommandBuffer beginOneTimeCommandBuffer(Queue::Type queue = Queue::COMPUTE);
 
-    void endOneTimeCommandBuffer(vk::UniqueCommandBuffer &&commandBuffer, Queue::Type queue);
+    void endOneTimeCommandBuffer(vk::UniqueCommandBuffer&& commandBuffer, Queue::Type queue);
 
     virtual ~VulkanContext();
 
@@ -90,22 +96,26 @@ public:
     std::optional<vk::UniqueSurfaceKHR> surface;
     vk::UniqueDevice device;
     std::unordered_map<Queue::Type, Queue> queues;
-    VmaAllocator allocator;
+    VmaAllocator allocator = nullptr;
 
     vk::UniqueDescriptorPool descriptorPool;
     vk::UniqueQueryPool queryPool;
 
     bool validationLayersEnabled;
-private:
+
+  private:
     std::vector<std::string> instanceExtensions;
     std::vector<std::string> deviceExtensions;
 
-    vk::UniqueCommandPool commandPool;
+    // One transient command pool per queue family. One-time command buffers must
+    // be allocated from a pool created for the family of the submission queue
+    // (VKGS-001); using a single graphics-family pool is invalid when graphics
+    // and compute families differ.
+    std::unordered_map<uint32_t, vk::UniqueCommandPool> oneTimeCommandPools;
 
     void setupVma();
 
-    void createCommandPool();
+    vk::CommandPool getOneTimePool(uint32_t queueFamily);
 };
 
-
-#endif //VULKANCONTEXT_H
+#endif // VULKANCONTEXT_H

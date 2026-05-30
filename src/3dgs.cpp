@@ -1,6 +1,6 @@
-#include "3dgs.h"
 #include "Renderer.h"
 
+#include <3dgs/3dgs.h>
 #include <stdexcept>
 
 #ifdef VKGS_ENABLE_GLFW
@@ -9,7 +9,6 @@ std::shared_ptr<Window> VulkanSplatting::createGlfwWindow(std::string name, int 
     return std::make_shared<GLFWWindow>(name, width, height);
 }
 #endif
-
 
 void VulkanSplatting::start() {
     // Create the renderer
@@ -24,10 +23,16 @@ void VulkanSplatting::initialize() {
 }
 
 void VulkanSplatting::draw() {
+    if (!renderer) {
+        throw std::runtime_error("Renderer must be initialized before draw()");
+    }
     renderer->draw();
 }
 
 std::vector<uint8_t> VulkanSplatting::readPixels() {
+    if (!renderer) {
+        throw std::runtime_error("Renderer must be initialized before readPixels()");
+    }
     return renderer->readPixels();
 }
 
@@ -52,9 +57,15 @@ void VulkanSplatting::logTranslation(float x, float y) {
 }
 
 void VulkanSplatting::logMovement(float x, float y, float z) {
+    if (!renderer) {
+        throw std::runtime_error("Renderer must be initialized before logMovement()");
+    }
     renderer->camera.translate(glm::vec3(x, y, z));
 }
 
 void VulkanSplatting::stop() {
+    if (!renderer) {
+        return;
+    }
     renderer->stop();
 }

@@ -1,13 +1,13 @@
 #ifndef OFFSCREEN_RENDER_TARGET_H
 #define OFFSCREEN_RENDER_TARGET_H
 
+#include "VulkanContext.h"
+
 #include <memory>
 #include <vector>
 
-#include "VulkanContext.h"
-
 class OffscreenRenderTarget {
-public:
+  public:
     OffscreenRenderTarget(std::shared_ptr<VulkanContext> context, uint32_t width, uint32_t height,
                           vk::Format format = vk::Format::eR8G8B8A8Unorm);
 
@@ -22,10 +22,10 @@ public:
     vk::Format format;
     std::vector<std::shared_ptr<Image>> images;
 
-private:
+  private:
     std::shared_ptr<VulkanContext> context;
     vk::Image image;
     VmaAllocation allocation = nullptr;
 };
 
-#endif //OFFSCREEN_RENDER_TARGET_H
+#endif // OFFSCREEN_RENDER_TARGET_H

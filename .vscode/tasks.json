@@ -1,0 +1,101 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "run: 3dgs_viewer (on-screen Debug)",
+      "type": "process",
+      "command": "${workspaceFolder}/build/windows-msvc-onscreen-debug/apps/viewer/3dgs_viewer.exe",
+      "args": [
+        "${input:scenePath}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "run: 3dgs_viewer (on-screen Release)",
+      "type": "process",
+      "command": "${workspaceFolder}/build/windows-msvc-onscreen-release/apps/viewer/3dgs_viewer.exe",
+      "args": [
+        "${input:scenePath}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: 3dgs_render (off-screen Debug)",
+      "type": "process",
+      "command": "${workspaceFolder}/build/windows-msvc-offscreen-debug/apps/offscreen/3dgs_render.exe",
+      "args": [
+        "--config",
+        "${input:renderConfigPath}",
+        "--output",
+        "${input:renderOutputDir}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "run: 3dgs_render (off-screen Release)",
+      "type": "process",
+      "command": "${workspaceFolder}/build/windows-msvc-offscreen-release/apps/offscreen/3dgs_render.exe",
+      "args": [
+        "--config",
+        "${input:renderConfigPath}",
+        "--output",
+        "${input:renderOutputDir}"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "scenePath",
+      "type": "promptString",
+      "description": "Path to a Gaussian Splatting scene file"
+    },
+    {
+      "id": "renderConfigPath",
+      "type": "promptString",
+      "description": "Path to an off-screen render JSON config",
+      "default": "${workspaceFolder}/apps/offscreen/examples/simple_render.json"
+    },
+    {
+      "id": "renderOutputDir",
+      "type": "promptString",
+      "description": "Directory for off-screen render output (PPM files)",
+      "default": "${workspaceFolder}/renders"
+    }
+  ]
+}

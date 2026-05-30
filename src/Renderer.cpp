@@ -6,17 +6,33 @@
 #include "vulkan/Swapchain.h"
 #endif
 
-#include <memory>
+#include "GpuConstants.h"
 #include "shaders.h"
-#include <utility>
+#include "vulkan/Utils.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-
-#include "vulkan/Utils.h"
-
+#include <memory>
 #include <spdlog/spdlog.h>
+#include <utility>
+
+namespace {
+constexpr uint32_t ceilDiv(uint32_t numerator, uint32_t denominator) {
+    return (numerator + denominator - 1) / denominator;
+}
+// Number of tiles spanning a framebuffer dimension.
+inline uint32_t tilesX(uint32_t width) {
+    return ceilDiv(width, gpu::TileWidth);
+}
+inline uint32_t tilesY(uint32_t height) {
+    return ceilDiv(height, gpu::TileHeight);
+}
+// Number of WORKGROUP_SIZE-sized compute workgroups needed to cover n elements.
+inline uint32_t workgroups(uint64_t n) {
+    return static_cast<uint32_t>((n + gpu::WorkgroupSize - 1) / gpu::WorkgroupSize);
+}
+} // namespace
 
 void Renderer::initialize() {
     initializeVulkan();
@@ -37,8 +53,8 @@ void Renderer::handleInput() {
     auto translation = window->getCursorTranslation();
     auto keys = window->getKeys(); // W, A, S, D
 
-    if ((!configuration.enableGui || (!guiManager.wantCaptureMouse() && !guiManager.mouseCapture)) && window->
-        getMouseButton()[0]) {
+    if ((!configuration.enableGui || (!guiManager.wantCaptureMouse() && !guiManager.mouseCapture)) &&
+        window->getMouseButton()[0]) {
         window->mouseCapture(true);
         guiManager.mouseCapture = true;
     }
@@ -46,10 +62,10 @@ void Renderer::handleInput() {
     // rotate camera
     if (!configuration.enableGui || guiManager.mouseCapture) {
         if (translation[0] != 0.0 || translation[1] != 0.0) {
-            camera.rotation = glm::rotate(camera.rotation, static_cast<float>(translation[0]) * 0.005f,
-                                          glm::vec3(0.0f, -1.0f, 0.0f));
-            camera.rotation = glm::rotate(camera.rotation, static_cast<float>(translation[1]) * 0.005f,
-                                          glm::vec3(-1.0f, 0.0f, 0.0f));
+            camera.rotation =
+                glm::rotate(camera.rotation, static_cast<float>(translation[0]) * 0.005f, glm::vec3(0.0f, -1.0f, 0.0f));
+            camera.rotation =
+                glm::rotate(camera.rotation, static_cast<float>(translation[1]) * 0.005f, glm::vec3(-1.0f, 0.0f, 0.0f));
         }
     }
 
@@ -88,16 +104,15 @@ void Renderer::handleInput() {
 
 void Renderer::retrieveTimestamps() {
     std::vector<uint64_t> timestamps(queryManager->nextId);
-    auto res = context->device->getQueryPoolResults(context->queryPool.get(), 0, queryManager->nextId,
-                                                    timestamps.size() * sizeof(uint64_t),
-                                                    timestamps.data(), sizeof(uint64_t),
-                                                    vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait);
+    auto res = context->device->getQueryPoolResults(
+        context->queryPool.get(), 0, queryManager->nextId, timestamps.size() * sizeof(uint64_t), timestamps.data(),
+        sizeof(uint64_t), vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait);
     if (res != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to retrieve timestamps");
     }
 
     auto metrics = queryManager->parseResults(timestamps);
-    for (auto& metric: metrics) {
+    for (auto& metric : metrics) {
         if (configuration.enableGui)
             guiManager.pushMetric(metric.first, metric.second / 1000000.0);
     }
@@ -113,8 +128,8 @@ void Renderer::recreateSwapchain() {
     }
 
     auto [width, height] = getRenderExtent();
-    auto tileX = (width + 16 - 1) / 16;
-    auto tileY = (height + 16 - 1) / 16;
+    auto tileX = tilesX(width);
+    auto tileY = tilesY(height);
     tileBoundaryBuffer->realloc(tileX * tileY * sizeof(uint32_t) * 2);
 
     recordPreprocessCommandBuffer();
@@ -146,13 +161,11 @@ void Renderer::initializeVulkan() {
     vk::PhysicalDeviceVulkan12Features pdf12{};
     pdf.shaderStorageImageWriteWithoutFormat = true;
     pdf.shaderInt64 = true;
-    // pdf.robustBufferAccess = true;
-    // pdf12.shaderFloat16 = true;]
-    pdf12.shaderBufferInt64Atomics = true;
     pdf12.shaderSharedInt64Atomics = true;
 
     context->createLogicalDevice(pdf, pdf11, pdf12);
     context->createDescriptorPool(1);
+    queryManager->setCapacity(VulkanContext::kTimestampQueryCount);
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     swapchain = std::make_shared<Swapchain>(context, window, configuration.immediateSwapchain);
@@ -200,14 +213,11 @@ void Renderer::createPreprocessPipeline() {
 
     auto uniformOutputSet = std::make_shared<DescriptorSet>(context, FRAMES_IN_FLIGHT);
     uniformOutputSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eUniformBuffer,
-                                                vk::ShaderStageFlagBits::eCompute,
-                                                uniformBuffer);
+                                                vk::ShaderStageFlagBits::eCompute, uniformBuffer);
     uniformOutputSet->bindBufferToDescriptorSet(1, vk::DescriptorType::eStorageBuffer,
-                                                vk::ShaderStageFlagBits::eCompute,
-                                                vertexAttributeBuffer);
+                                                vk::ShaderStageFlagBits::eCompute, vertexAttributeBuffer);
     uniformOutputSet->bindBufferToDescriptorSet(2, vk::DescriptorType::eStorageBuffer,
-                                                vk::ShaderStageFlagBits::eCompute,
-                                                tileOverlapBuffer);
+                                                vk::ShaderStageFlagBits::eCompute, tileOverlapBuffer);
     uniformOutputSet->build();
 
     preprocessPipeline->addDescriptorSet(1, uniformOutputSet);
@@ -215,6 +225,11 @@ void Renderer::createPreprocessPipeline() {
 }
 
 Renderer::Renderer(VulkanSplatting::RendererConfiguration configuration) : configuration(std::move(configuration)) {
+    // Render dimensions feed buffer sizes, dispatch counts, and FOV math; zero
+    // values cause divide-by-zero and zero-sized allocations (VKGS-016).
+    if (this->configuration.width == 0 || this->configuration.height == 0) {
+        throw std::runtime_error("Render dimensions must be non-zero");
+    }
     camera.fov = this->configuration.fov;
     camera.nearPlane = this->configuration.near;
     camera.farPlane = this->configuration.far;
@@ -244,7 +259,6 @@ void Renderer::createGui() {
     guiManager.init();
 #endif
 }
-
 
 vk::Extent2D Renderer::getRenderExtent() const {
 #ifdef VKGS_RENDER_MODE_ONSCREEN
@@ -301,14 +315,14 @@ void Renderer::createRadixSortPipeline() {
     uint32_t remainder = scene->getNumVertices() * sortBufferSizeMultiplier % numRadixSortBlocksPerWorkgroup;
     globalInvocationSize += remainder > 0 ? 1 : 0;
 
-    auto numWorkgroups = (globalInvocationSize + 256 - 1) / 256;
+    auto numWorkgroups = workgroups(globalInvocationSize);
 
-    sortHistBuffer = Buffer::storage(context, numWorkgroups * 256 * sizeof(uint32_t), false);
+    sortHistBuffer = Buffer::storage(context, numWorkgroups * gpu::RadixSortBins * sizeof(uint32_t), false);
 
-    sortHistPipeline = std::make_shared<ComputePipeline>(
-        context, std::make_shared<Shader>(context, "hist", SPV_HIST, SPV_HIST_len));
-    sortPipeline = std::make_shared<ComputePipeline>(
-        context, std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len));
+    sortHistPipeline =
+        std::make_shared<ComputePipeline>(context, std::make_shared<Shader>(context, "hist", SPV_HIST, SPV_HIST_len));
+    sortPipeline =
+        std::make_shared<ComputePipeline>(context, std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len));
 
     auto descriptorSet = std::make_shared<DescriptorSet>(context, FRAMES_IN_FLIGHT);
     descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute,
@@ -372,8 +386,8 @@ void Renderer::createPreprocessSortPipeline() {
 void Renderer::createTileBoundaryPipeline() {
     spdlog::debug("Creating tile boundary pipeline");
     auto [width, height] = getRenderExtent();
-    auto tileX = (width + 16 - 1) / 16;
-    auto tileY = (height + 16 - 1) / 16;
+    auto tileX = tilesX(width);
+    auto tileY = tilesY(height);
     tileBoundaryBuffer = Buffer::storage(context, tileX * tileY * sizeof(uint32_t) * 2, false);
 
     tileBoundaryPipeline = std::make_shared<ComputePipeline>(
@@ -381,7 +395,8 @@ void Renderer::createTileBoundaryPipeline() {
     auto descriptorSet = std::make_shared<DescriptorSet>(context, FRAMES_IN_FLIGHT);
     descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute,
                                              sortKBufferEven);
-    // descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute,
+    // descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer,
+    // vk::ShaderStageFlagBits::eCompute,
     //                                          sortKBufferOdd);
     descriptorSet->bindBufferToDescriptorSet(1, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute,
                                              tileBoundaryBuffer);
@@ -408,7 +423,7 @@ void Renderer::createRenderPipeline() {
     inputSet->build();
 
     auto outputSet = std::make_shared<DescriptorSet>(context, 1);
-    for (auto& image: getRenderImages()) {
+    for (auto& image : getRenderImages()) {
         outputSet->bindImageToDescriptorSet(0, vk::DescriptorType::eStorageImage, vk::ShaderStageFlagBits::eCompute,
                                             image);
     }
@@ -427,9 +442,9 @@ void Renderer::draw() {
     context->device->resetFences(inflightFences[0].get());
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
-    auto res = context->device->acquireNextImageKHR(swapchain->swapchain.get(), UINT64_MAX,
-                                                    swapchain->imageAvailableSemaphores[0].get(),
-                                                    nullptr, &currentImageIndex);
+    auto res =
+        context->device->acquireNextImageKHR(swapchain->swapchain.get(), UINT64_MAX,
+                                             swapchain->imageAvailableSemaphores[0].get(), nullptr, &currentImageIndex);
     if (res == vk::Result::eErrorOutOfDateKHR) {
         recreateSwapchain();
         return;
@@ -440,29 +455,36 @@ void Renderer::draw() {
     currentImageIndex = 0;
 #endif
 
-startOfRenderLoop:
-    handleInput();
+    // Retry loop: recordRenderCommandBuffer returns false when it had to grow
+    // the sort buffers and re-record preprocessing, requiring another pass
+    // (VKGS-022, formerly a goto).
+    vk::SubmitInfo submitInfo;
+    while (true) {
+        handleInput();
 
-    updateUniforms();
+        updateUniforms();
 
-    auto submitInfo = vk::SubmitInfo{}.setCommandBuffers(preprocessCommandBuffer.get());
-    context->queues[VulkanContext::Queue::COMPUTE].queue.submit(submitInfo, inflightFences[0].get());
+        submitInfo = vk::SubmitInfo{}.setCommandBuffers(preprocessCommandBuffer.get());
+        context->queues[VulkanContext::Queue::COMPUTE].queue.submit(submitInfo, inflightFences[0].get());
 
-    ret = context->device->waitForFences(inflightFences[0].get(), VK_TRUE, UINT64_MAX);
-    if (ret != vk::Result::eSuccess) {
-        throw std::runtime_error("Failed to wait for fence");
-    }
-    context->device->resetFences(inflightFences[0].get());
+        ret = context->device->waitForFences(inflightFences[0].get(), VK_TRUE, UINT64_MAX);
+        if (ret != vk::Result::eSuccess) {
+            throw std::runtime_error("Failed to wait for fence");
+        }
+        context->device->resetFences(inflightFences[0].get());
 
-    if (!recordRenderCommandBuffer(0)) {
-        goto startOfRenderLoop;
+        if (!recordRenderCommandBuffer(0)) {
+            continue;
+        }
+        break;
     }
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eComputeShader;
-    submitInfo = vk::SubmitInfo{}.setWaitSemaphores(swapchain->imageAvailableSemaphores[0].get())
-            .setCommandBuffers(renderCommandBuffer.get())
-            .setSignalSemaphores(renderFinishedSemaphores[0].get())
-            .setWaitDstStageMask(waitStage);
+    submitInfo = vk::SubmitInfo{}
+                     .setWaitSemaphores(swapchain->imageAvailableSemaphores[0].get())
+                     .setCommandBuffers(renderCommandBuffer.get())
+                     .setSignalSemaphores(renderFinishedSemaphores[0].get())
+                     .setWaitDstStageMask(waitStage);
 #else
     submitInfo = vk::SubmitInfo{}.setCommandBuffers(renderCommandBuffer.get());
 #endif
@@ -491,7 +513,6 @@ startOfRenderLoop:
 #endif
 }
 
-
 std::vector<uint8_t> Renderer::readPixels() {
 #ifdef VKGS_RENDER_MODE_OFFSCREEN
     auto ret = context->device->waitForFences(inflightFences[0].get(), VK_TRUE, UINT64_MAX);
@@ -500,8 +521,8 @@ std::vector<uint8_t> Renderer::readPixels() {
     }
 
     auto [width, height] = getRenderExtent();
-    const auto pixelSize = 4u;
-    const auto byteSize = width * height * pixelSize;
+    const vk::DeviceSize pixelSize = 4u;
+    const vk::DeviceSize byteSize = static_cast<vk::DeviceSize>(width) * height * pixelSize;
     auto stagingBuffer = Buffer::staging(context, byteSize);
     auto image = getCurrentRenderImage();
 
@@ -515,8 +536,7 @@ std::vector<uint8_t> Renderer::readPixels() {
     imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
     imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader,
-                                   vk::PipelineStageFlagBits::eTransfer,
+    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer,
                                    vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
 
     vk::BufferImageCopy copyRegion{};
@@ -526,15 +546,14 @@ std::vector<uint8_t> Renderer::readPixels() {
     copyRegion.imageSubresource = {vk::ImageAspectFlagBits::eColor, 0, 0, 1};
     copyRegion.imageOffset = vk::Offset3D{0, 0, 0};
     copyRegion.imageExtent = vk::Extent3D{width, height, 1};
-    commandBuffer->copyImageToBuffer(image->image, vk::ImageLayout::eTransferSrcOptimal,
-                                     stagingBuffer->buffer, 1, &copyRegion);
+    commandBuffer->copyImageToBuffer(image->image, vk::ImageLayout::eTransferSrcOptimal, stagingBuffer->buffer, 1,
+                                     &copyRegion);
 
     imageMemoryBarrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
     imageMemoryBarrier.newLayout = vk::ImageLayout::eGeneral;
     imageMemoryBarrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
     imageMemoryBarrier.dstAccessMask = vk::AccessFlagBits::eShaderWrite;
-    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
-                                   vk::PipelineStageFlagBits::eComputeShader,
+    commandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader,
                                    vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
 
     context->endOneTimeCommandBuffer(std::move(commandBuffer), VulkanContext::Queue::COMPUTE);
@@ -600,22 +619,24 @@ void Renderer::recordPreprocessCommandBuffer() {
     }
     preprocessCommandBuffer->reset();
 
-    auto numGroups = (scene->getNumVertices() + 255) / 256;
+    auto numGroups = workgroups(scene->getNumVertices());
 
     preprocessCommandBuffer->begin(vk::CommandBufferBeginInfo{});
 
-    preprocessCommandBuffer->resetQueryPool(context->queryPool.get(), 0, 12);
+    preprocessCommandBuffer->resetQueryPool(context->queryPool.get(), 0, VulkanContext::kTimestampQueryCount);
 
     preprocessPipeline->bind(preprocessCommandBuffer, 0, 0);
     preprocessCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                             queryManager->registerQuery("preprocess_start"));
     preprocessCommandBuffer->dispatch(numGroups, 1, 1);
-    tileOverlapBuffer->computeWriteReadBarrier(preprocessCommandBuffer.get());
+    // Compute writes the overlap counts; the copy below reads them via transfer.
+    tileOverlapBuffer->computeToTransferReadBarrier(preprocessCommandBuffer.get());
 
     vk::BufferCopy copyRegion = {0, 0, tileOverlapBuffer->size};
     preprocessCommandBuffer->copyBuffer(tileOverlapBuffer->buffer, prefixSumPingBuffer->buffer, 1, &copyRegion);
 
-    prefixSumPingBuffer->computeWriteReadBarrier(preprocessCommandBuffer.get());
+    // The transfer wrote the ping buffer; the prefix-sum compute pass reads it.
+    prefixSumPingBuffer->transferToComputeReadBarrier(preprocessCommandBuffer.get());
 
     preprocessCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                             queryManager->registerQuery("preprocess_end"));
@@ -626,8 +647,7 @@ void Renderer::recordPreprocessCommandBuffer() {
     const auto iters = static_cast<uint32_t>(std::ceil(std::log2(static_cast<float>(scene->getNumVertices()))));
     for (uint32_t timestep = 0; timestep <= iters; timestep++) {
         preprocessCommandBuffer->pushConstants(prefixSumPipeline->pipelineLayout.get(),
-                                               vk::ShaderStageFlagBits::eCompute, 0,
-                                               sizeof(uint32_t), &timestep);
+                                               vk::ShaderStageFlagBits::eCompute, 0, sizeof(uint32_t), &timestep);
         preprocessCommandBuffer->dispatch(numGroups, 1, 1);
 
         if (timestep % 2 == 0) {
@@ -640,20 +660,16 @@ void Renderer::recordPreprocessCommandBuffer() {
     }
 
     auto totalSumRegion = vk::BufferCopy{(scene->getNumVertices() - 1) * sizeof(uint32_t), 0, sizeof(uint32_t)};
-    if (iters % 2 == 0) {
-        preprocessCommandBuffer->copyBuffer(prefixSumPingBuffer->buffer, totalSumBufferHost->buffer, 1,
-                                            &totalSumRegion);
-    } else {
-        preprocessCommandBuffer->copyBuffer(prefixSumPongBuffer->buffer, totalSumBufferHost->buffer, 1,
-                                            &totalSumRegion);
-    }
+    // Ensure the final prefix-sum compute write is visible to the transfer read.
+    auto& finalPrefixSumBuffer = (iters % 2 == 0) ? prefixSumPingBuffer : prefixSumPongBuffer;
+    finalPrefixSumBuffer->computeToTransferReadBarrier(preprocessCommandBuffer.get());
+    preprocessCommandBuffer->copyBuffer(finalPrefixSumBuffer->buffer, totalSumBufferHost->buffer, 1, &totalSumRegion);
 
     preprocessCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
-                                        queryManager->registerQuery("prefix_sum_end"));
+                                            queryManager->registerQuery("prefix_sum_end"));
 
     preprocessCommandBuffer->end();
 }
-
 
 bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     if (!renderCommandBuffer) {
@@ -662,7 +678,6 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     }
 
     uint32_t numInstances = totalSumBufferHost->readOne<uint32_t>();
-    // spdlog::debug("Num instances: {}", numInstances);
     guiManager.pushTextMetric("instances", numInstances);
     if (numInstances > scene->getNumVertices() * sortBufferSizeMultiplier) {
         auto old = sortBufferSizeMultiplier;
@@ -675,14 +690,14 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
         sortVBufferEven->realloc(scene->getNumVertices() * sizeof(uint32_t) * sortBufferSizeMultiplier);
         sortVBufferOdd->realloc(scene->getNumVertices() * sizeof(uint32_t) * sortBufferSizeMultiplier);
 
-        uint32_t globalInvocationSize = scene->getNumVertices() * sortBufferSizeMultiplier /
-                                        numRadixSortBlocksPerWorkgroup;
+        uint32_t globalInvocationSize =
+            scene->getNumVertices() * sortBufferSizeMultiplier / numRadixSortBlocksPerWorkgroup;
         uint32_t remainder = scene->getNumVertices() * sortBufferSizeMultiplier % numRadixSortBlocksPerWorkgroup;
         globalInvocationSize += remainder > 0 ? 1 : 0;
 
-        auto numWorkgroups = (globalInvocationSize + 256 - 1) / 256;
+        auto numWorkgroups = workgroups(globalInvocationSize);
 
-        sortHistBuffer->realloc(numWorkgroups * 256 * sizeof(uint32_t));
+        sortHistBuffer->realloc(numWorkgroups * gpu::RadixSortBins * sizeof(uint32_t));
 
         recordPreprocessCommandBuffer();
         return false;
@@ -691,42 +706,36 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     renderCommandBuffer->reset({});
     renderCommandBuffer->begin(vk::CommandBufferBeginInfo{});
 
-
     vertexAttributeBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 
     const auto iters = static_cast<uint32_t>(std::ceil(std::log2(static_cast<float>(scene->getNumVertices()))));
-    auto numGroups = (scene->getNumVertices() + 255) / 256;
+    auto numGroups = workgroups(scene->getNumVertices());
     preprocessSortPipeline->bind(renderCommandBuffer, 0, iters % 2 == 0 ? 0 : 1);
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
-                                            queryManager->registerQuery("preprocess_sort_start"));
-    uint32_t tileX = (getRenderExtent().width + 16 - 1) / 16;
-    // assert(tileX == 50);
-    renderCommandBuffer->pushConstants(preprocessSortPipeline->pipelineLayout.get(),
-                                           vk::ShaderStageFlagBits::eCompute, 0,
-                                           sizeof(uint32_t), &tileX);
+                                        queryManager->registerQuery("preprocess_sort_start"));
+    uint32_t tileX = tilesX(getRenderExtent().width);
+    renderCommandBuffer->pushConstants(preprocessSortPipeline->pipelineLayout.get(), vk::ShaderStageFlagBits::eCompute,
+                                       0, sizeof(uint32_t), &tileX);
     renderCommandBuffer->dispatch(numGroups, 1, 1);
 
     sortKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
-                                            queryManager->registerQuery("preprocess_sort_end"));
-
-    // std::cout << "Num instances: " << numInstances << std::endl;
+                                        queryManager->registerQuery("preprocess_sort_end"));
 
     assert(numInstances <= scene->getNumVertices() * sortBufferSizeMultiplier);
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
-                                                queryManager->registerQuery("sort_start"));
+                                        queryManager->registerQuery("sort_start"));
     for (auto i = 0; i < 8; i++) {
         sortHistPipeline->bind(renderCommandBuffer, 0, i % 2 == 0 ? 0 : 1);
         auto invocationSize = (numInstances + numRadixSortBlocksPerWorkgroup - 1) / numRadixSortBlocksPerWorkgroup;
-        invocationSize = (invocationSize + 255) / 256;
+        invocationSize = ceilDiv(invocationSize, gpu::WorkgroupSize);
 
         RadixSortPushConstants pushConstants{};
         pushConstants.g_num_elements = numInstances;
         pushConstants.g_num_blocks_per_workgroup = numRadixSortBlocksPerWorkgroup;
         pushConstants.g_shift = i * 8;
         pushConstants.g_num_workgroups = invocationSize;
-        renderCommandBuffer->pushConstants(sortHistPipeline->pipelineLayout.get(),
-                                           vk::ShaderStageFlagBits::eCompute, 0,
+        renderCommandBuffer->pushConstants(sortHistPipeline->pipelineLayout.get(), vk::ShaderStageFlagBits::eCompute, 0,
                                            sizeof(RadixSortPushConstants), &pushConstants);
 
         renderCommandBuffer->dispatch(invocationSize, 1, 1);
@@ -734,8 +743,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
         sortHistBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 
         sortPipeline->bind(renderCommandBuffer, 0, i % 2 == 0 ? 0 : 1);
-        renderCommandBuffer->pushConstants(sortPipeline->pipelineLayout.get(),
-                                           vk::ShaderStageFlagBits::eCompute, 0,
+        renderCommandBuffer->pushConstants(sortPipeline->pipelineLayout.get(), vk::ShaderStageFlagBits::eCompute, 0,
                                            sizeof(RadixSortPushConstants), &pushConstants);
         renderCommandBuffer->dispatch(invocationSize, 1, 1);
 
@@ -748,24 +756,23 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
         }
     }
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
-                                                queryManager->registerQuery("sort_end"));
+                                        queryManager->registerQuery("sort_end"));
 
     renderCommandBuffer->fillBuffer(tileBoundaryBuffer->buffer, 0, VK_WHOLE_SIZE, 0);
 
-    Utils::BarrierBuilder().queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
-            .addBufferBarrier(tileBoundaryBuffer, vk::AccessFlagBits::eTransferWrite,
-                              vk::AccessFlagBits::eShaderWrite)
-            .build(renderCommandBuffer.get(), vk::PipelineStageFlagBits::eTransfer,
-                   vk::PipelineStageFlagBits::eComputeShader);
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(tileBoundaryBuffer, vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderWrite)
+        .build(renderCommandBuffer.get(), vk::PipelineStageFlagBits::eTransfer,
+               vk::PipelineStageFlagBits::eComputeShader);
 
     // Since we have 64 bit keys, the sort result is always in the even buffer
     tileBoundaryPipeline->bind(renderCommandBuffer, 0, 0);
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
                                         queryManager->registerQuery("tile_boundary_start"));
-    renderCommandBuffer->pushConstants(tileBoundaryPipeline->pipelineLayout.get(),
-                                       vk::ShaderStageFlagBits::eCompute, 0,
+    renderCommandBuffer->pushConstants(tileBoundaryPipeline->pipelineLayout.get(), vk::ShaderStageFlagBits::eCompute, 0,
                                        sizeof(uint32_t), &numInstances);
-    renderCommandBuffer->dispatch((numInstances + 255) / 256, 1, 1);
+    renderCommandBuffer->dispatch(workgroups(numInstances), 1, 1);
 
     tileBoundaryBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
     renderCommandBuffer->writeTimestamp(vk::PipelineStageFlagBits::eComputeShader, context->queryPool.get(),
@@ -776,8 +783,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
                                         queryManager->registerQuery("render_start"));
     auto [width, height] = getRenderExtent();
     uint32_t constants[2] = {width, height};
-    renderCommandBuffer->pushConstants(renderPipeline->pipelineLayout.get(),
-                                       vk::ShaderStageFlagBits::eCompute, 0,
+    renderCommandBuffer->pushConstants(renderPipeline->pipelineLayout.get(), vk::ShaderStageFlagBits::eCompute, 0,
                                        sizeof(uint32_t) * 2, constants);
 
     // image layout transition: render target -> general
@@ -795,10 +801,10 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     imageMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     imageMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     renderCommandBuffer->pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe,
-                                         vk::PipelineStageFlagBits::eComputeShader,
-                                         vk::DependencyFlagBits::eByRegion, nullptr, nullptr, imageMemoryBarrier);
+                                         vk::PipelineStageFlagBits::eComputeShader, vk::DependencyFlagBits::eByRegion,
+                                         nullptr, nullptr, imageMemoryBarrier);
 
-    renderCommandBuffer->dispatch((width + 15) / 16, (height + 15) / 16, 1);
+    renderCommandBuffer->dispatch(tilesX(width), tilesY(height), 1);
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     // image layout transition: general -> present
@@ -858,10 +864,9 @@ void Renderer::updateUniforms() {
     float tan_fovx = std::tan(glm::radians(camera.fov) / 2.0);
     float tan_fovy = tan_fovx * static_cast<float>(height) / static_cast<float>(width);
     data.view_mat = view;
-    data.proj_mat = glm::perspective(std::atan(tan_fovy) * 2.0f,
-                                     static_cast<float>(width) / static_cast<float>(height),
-                                     camera.nearPlane,
-                                     camera.farPlane) * view;
+    data.proj_mat = glm::perspective(std::atan(tan_fovy) * 2.0f, static_cast<float>(width) / static_cast<float>(height),
+                                     camera.nearPlane, camera.farPlane) *
+                    view;
 
     data.view_mat[0][1] *= -1.0f;
     data.view_mat[1][1] *= -1.0f;
@@ -878,8 +883,8 @@ void Renderer::updateUniforms() {
     data.proj_mat[3][1] *= -1.0f;
     data.tan_fovx = tan_fovx;
     data.tan_fovy = tan_fovy;
+    data.near_plane = camera.nearPlane;
     uniformBuffer->upload(&data, sizeof(UniformBuffer), 0);
 }
 
-Renderer::~Renderer() {
-}
+Renderer::~Renderer() {}

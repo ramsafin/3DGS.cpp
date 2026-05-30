@@ -1,15 +1,14 @@
-#include <iostream>
-#include <utility>
 #include "Buffer.h"
 
 #include "Utils.h"
 #include "spdlog/spdlog.h"
 
+#include <iostream>
+#include <utility>
+
 void Buffer::alloc() {
-    auto bufferInfo = vk::BufferCreateInfo()
-            .setSize(size)
-            .setUsage(usage)
-            .setSharingMode(shared ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive);
+    auto bufferInfo = vk::BufferCreateInfo().setSize(size).setUsage(usage).setSharingMode(
+        shared ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive);
     if (shared) {
         auto graphicsFamily = context->queues[VulkanContext::Queue::Type::GRAPHICS].queueFamily;
         auto computeFamily = context->queues[VulkanContext::Queue::Type::COMPUTE].queueFamily;
@@ -38,46 +37,43 @@ void Buffer::alloc() {
     buffer = vk::Buffer(vkBuffer);
 
     if (context->validationLayersEnabled) {
-        context->device->setDebugUtilsObjectNameEXT(
-                vk::DebugUtilsObjectNameInfoEXT {vk::ObjectType::eBuffer, reinterpret_cast<uint64_t>(static_cast<VkBuffer>(buffer)), debugName.c_str()});
+        context->device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT{
+            vk::ObjectType::eBuffer, reinterpret_cast<uint64_t>(static_cast<VkBuffer>(buffer)), debugName.c_str()});
     }
 }
 
-Buffer::Buffer(const std::shared_ptr<VulkanContext>& _context, uint32_t size, vk::BufferUsageFlags usage,
-               VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags flags, bool shared, vk::DeviceSize alignment, std::string debugName)
-    : context(_context),
-      size(size),
-      alignment(alignment),
-      shared(shared),
-      usage(usage),
-      vmaUsage(vmaUsage),
-      flags(flags),
-      allocation(nullptr),
-      debugName(std::move(debugName)) {
+Buffer::Buffer(const std::shared_ptr<VulkanContext>& _context, vk::DeviceSize size, vk::BufferUsageFlags usage,
+               VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags flags, bool shared, vk::DeviceSize alignment,
+               std::string debugName)
+    : context(_context), size(size), alignment(alignment), shared(shared), usage(usage), vmaUsage(vmaUsage),
+      flags(flags), allocation(nullptr), debugName(std::move(debugName)) {
     alloc();
 }
 
-Buffer Buffer::createStagingBuffer(uint32_t size) {
-    return Buffer(context, size, vk::BufferUsageFlagBits::eTransferSrc,
-                  VMA_MEMORY_USAGE_AUTO,
+Buffer Buffer::createStagingBuffer(vk::DeviceSize size) {
+    return Buffer(context, size, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO,
                   VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, false);
 }
 
 void Buffer::upload(const void* data, uint32_t size, uint32_t offset) {
-    if (size + offset > this->size) {
+    // `offset` is the destination offset into this buffer (VKGS-006). The source
+    // pointer always starts at `data`.
+    if (static_cast<vk::DeviceSize>(offset) + size > this->size) {
         throw std::runtime_error("Buffer overflow");
     }
 
     if (vmaUsage == VMA_MEMORY_USAGE_GPU_ONLY || vmaUsage == VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE) {
         auto stagingBuffer = createStagingBuffer(size);
-        memcpy(stagingBuffer.allocation_info.pMappedData, ((char *) data) + offset, size);
+        memcpy(stagingBuffer.allocation_info.pMappedData, data, size);
+        stagingBuffer.flush();
         auto commandBuffer = context->beginOneTimeCommandBuffer();
         vk::BufferCopy copyRegion = {};
-        copyRegion.setSize(size);
+        copyRegion.setDstOffset(offset).setSize(size);
         commandBuffer->copyBuffer(stagingBuffer.buffer, buffer, 1, &copyRegion);
         context->endOneTimeCommandBuffer(std::move(commandBuffer), VulkanContext::Queue::COMPUTE);
     } else if (flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) {
-        memcpy(allocation_info.pMappedData, ((char *) data) + offset, size);
+        memcpy(static_cast<char*>(allocation_info.pMappedData) + offset, data, size);
+        flush(offset, size);
     } else {
         throw std::runtime_error("Buffer is not mappable");
     }
@@ -102,17 +98,39 @@ void Buffer::uploadFrom(std::shared_ptr<Buffer> buffer) {
 }
 
 void Buffer::downloadTo(std::shared_ptr<Buffer> buffer, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset) {
+    // Copies into the destination buffer starting at `dstOffset` up to its end,
+    // reading from this buffer starting at `srcOffset` (VKGS-006).
+    if (dstOffset > buffer->size) {
+        throw std::runtime_error("Buffer download destination offset out of range");
+    }
+    const vk::DeviceSize count = buffer->size - dstOffset;
+    if (srcOffset + count > this->size) {
+        throw std::runtime_error("Buffer download source range out of bounds");
+    }
+
     if (vmaUsage == VMA_MEMORY_USAGE_GPU_ONLY || vmaUsage == VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE) {
         auto commandBuffer = context->beginOneTimeCommandBuffer();
         vk::BufferCopy copyRegion = {};
-        copyRegion.setSize(buffer->size);
+        copyRegion.setSrcOffset(srcOffset).setDstOffset(dstOffset).setSize(count);
         commandBuffer->copyBuffer(this->buffer, buffer->buffer, 1, &copyRegion);
         context->endOneTimeCommandBuffer(std::move(commandBuffer), VulkanContext::Queue::COMPUTE);
+        // Make the freshly copied bytes visible to host reads of the destination.
+        buffer->invalidate(dstOffset, count);
     } else if (flags & VMA_ALLOCATION_CREATE_MAPPED_BIT) {
-        memcpy(buffer->allocation_info.pMappedData, allocation_info.pMappedData, buffer->size);
+        invalidate(srcOffset, count);
+        memcpy(static_cast<char*>(buffer->allocation_info.pMappedData) + dstOffset,
+               static_cast<char*>(allocation_info.pMappedData) + srcOffset, count);
     } else {
         throw std::runtime_error("Buffer is not mappable");
     }
+}
+
+void Buffer::flush(vk::DeviceSize offset, vk::DeviceSize size) {
+    vmaFlushAllocation(context->allocator, allocation, offset, size);
+}
+
+void Buffer::invalidate(vk::DeviceSize offset, vk::DeviceSize size) {
+    vmaInvalidateAllocation(context->allocator, allocation, offset, size);
 }
 
 Buffer::~Buffer() {
@@ -126,17 +144,17 @@ void Buffer::realloc(uint64_t newSize) {
     size = newSize;
     alloc();
 
-    vk::DescriptorBufferInfo bufferInfo(buffer, allocation_info.offset, size);
+    // Descriptor buffer offsets are relative to the start of the VkBuffer, not
+    // the backing VMA allocation (VKGS-012). Always bind from offset zero.
+    vk::DescriptorBufferInfo bufferInfo(buffer, 0, size);
 
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-    for (auto& tuple: boundDescriptorSets) {
+    for (auto& tuple : boundDescriptorSets) {
         auto descriptorSet = std::get<0>(tuple);
         auto shared = descriptorSet.lock();
         if (shared) {
-            writeDescriptorSets.emplace_back(shared->descriptorSets[std::get<1>(tuple)].get(),
-                                            std::get<2>(tuple), 0, 1,
-                                            std::get<3>(tuple), nullptr,
-                                            &bufferInfo);
+            writeDescriptorSets.emplace_back(shared->descriptorSets[std::get<1>(tuple)].get(), std::get<2>(tuple), 0, 1,
+                                             std::get<3>(tuple), nullptr, &bufferInfo);
         }
     }
     if (!writeDescriptorSets.empty()) {
@@ -145,30 +163,28 @@ void Buffer::realloc(uint64_t newSize) {
 }
 
 void Buffer::boundToDescriptorSet(std::weak_ptr<DescriptorSet> descriptorSet, uint32_t set, uint32_t binding,
-    vk::DescriptorType type) {
+                                  vk::DescriptorType type) {
     boundDescriptorSets.push_back({descriptorSet, set, binding, type});
 }
 
 std::shared_ptr<Buffer> Buffer::uniform(std::shared_ptr<VulkanContext> context, uint32_t size, bool concurrentSharing) {
-    return std::make_shared<Buffer>(std::move(context), size, vk::BufferUsageFlagBits::eUniformBuffer,
-                                    VMA_MEMORY_USAGE_AUTO,
-                                    VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-                                    concurrentSharing);
+    return std::make_shared<Buffer>(
+        std::move(context), size, vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, concurrentSharing);
 }
 
-std::shared_ptr<Buffer> Buffer::staging(std::shared_ptr<VulkanContext> context, unsigned long size) {
-    return std::make_shared<Buffer>(context, size,
-                                    vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
-                                    VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_MAPPED_BIT |
-                                                           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-                                    false);
+std::shared_ptr<Buffer> Buffer::staging(std::shared_ptr<VulkanContext> context, vk::DeviceSize size) {
+    return std::make_shared<Buffer>(
+        context, size, vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
+        VMA_MEMORY_USAGE_AUTO,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, false);
 }
 
 std::shared_ptr<Buffer> Buffer::storage(std::shared_ptr<VulkanContext> context, uint64_t size, bool concurrentSharing,
                                         vk::DeviceSize alignment, std::string debugName) {
     return std::make_shared<Buffer>(context, size,
                                     vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
-                                    vk::BufferUsageFlagBits::eTransferSrc,
+                                        vk::BufferUsageFlagBits::eTransferSrc,
                                     VMA_MEMORY_USAGE_GPU_ONLY, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
                                     concurrentSharing, alignment, debugName);
 }
@@ -194,33 +210,43 @@ void Buffer::assertEquals(char* data, size_t length) {
 }
 
 void Buffer::computeWriteReadBarrier(vk::CommandBuffer commandBuffer) {
-    Utils::BarrierBuilder().queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
-            .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead)
-            .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader,
-                   vk::PipelineStageFlagBits::eComputeShader);
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead)
+        .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader);
 }
 
 void Buffer::computeReadWriteBarrier(vk::CommandBuffer commandBuffer) {
-    Utils::BarrierBuilder().queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
-            .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderRead,
-                              vk::AccessFlagBits::eShaderWrite)
-            .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader,
-                   vk::PipelineStageFlagBits::eComputeShader);
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderRead, vk::AccessFlagBits::eShaderWrite)
+        .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader);
 }
 
 void Buffer::computeWriteWriteBarrier(vk::CommandBuffer commandBuffer) {
-    Utils::BarrierBuilder().queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
-            .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderWrite,
-                              vk::AccessFlagBits::eShaderWrite)
-            .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader,
-                   vk::PipelineStageFlagBits::eComputeShader);
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderWrite)
+        .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader);
+}
+
+void Buffer::computeToTransferReadBarrier(vk::CommandBuffer commandBuffer) {
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferRead)
+        .build(commandBuffer, vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eTransfer);
+}
+
+void Buffer::transferToComputeReadBarrier(vk::CommandBuffer commandBuffer) {
+    Utils::BarrierBuilder()
+        .queueFamilyIndex(context->queues[VulkanContext::Queue::COMPUTE].queueFamily)
+        .addBufferBarrier(shared_from_this(), vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead)
+        .build(commandBuffer, vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eComputeShader);
 }
 
 std::vector<char> Buffer::download() {
     auto stagingBuffer = Buffer::staging(context, size);
     downloadTo(stagingBuffer);
-    return {
-        (char *) stagingBuffer->allocation_info.pMappedData,
-        ((char *) stagingBuffer->allocation_info.pMappedData) + size
-    };
+    return {(char*)stagingBuffer->allocation_info.pMappedData,
+            ((char*)stagingBuffer->allocation_info.pMappedData) + size};
 }

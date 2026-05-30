@@ -3,15 +3,13 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-
 #include "windowing/GLFWWindow.h"
 
 ImguiManager::ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain,
-                           std::shared_ptr<Window> window) : context(context), swapchain(swapchain), window(window) {
-}
+                           std::shared_ptr<Window> window)
+    : context(context), swapchain(swapchain), window(window) {}
 
-void ImguiManager::createCommandPool() {
-}
+void ImguiManager::createCommandPool() {}
 
 void ImguiManager::setStyle() {
     auto& colors = ImGui::GetStyle().Colors;
@@ -88,39 +86,33 @@ void ImguiManager::setStyle() {
 }
 
 void ImguiManager::init() {
-    commandPool = context->device->createCommandPoolUnique(vk::CommandPoolCreateInfo(
-        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
-        context->queues[VulkanContext::Queue::GRAPHICS].queueFamily));
-    commandBuffer = std::move(
-        context->device->allocateCommandBuffersUnique(
-            vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 1))[0]);
+    commandPool = context->device->createCommandPoolUnique(
+        vk::CommandPoolCreateInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+                                  context->queues[VulkanContext::Queue::GRAPHICS].queueFamily));
+    commandBuffer = std::move(context->device->allocateCommandBuffersUnique(
+        vk::CommandBufferAllocateInfo(*commandPool, vk::CommandBufferLevel::ePrimary, 1))[0]);
     fence = context->device->createFenceUnique(vk::FenceCreateInfo(vk::FenceCreateFlagBits::eSignaled));
 
-    std::vector<vk::DescriptorPoolSize> poolSizes = {
-        {vk::DescriptorType::eSampler, 1000},
-        {vk::DescriptorType::eCombinedImageSampler, 1000},
-        {vk::DescriptorType::eSampledImage, 1000},
-        {vk::DescriptorType::eStorageImage, 1000},
-        {vk::DescriptorType::eUniformTexelBuffer, 1000},
-        {vk::DescriptorType::eStorageTexelBuffer, 1000},
-        {vk::DescriptorType::eUniformBuffer, 1000},
-        {vk::DescriptorType::eStorageBuffer, 1000},
-        {vk::DescriptorType::eUniformBufferDynamic, 1000},
-        {vk::DescriptorType::eStorageBufferDynamic, 1000},
-        {vk::DescriptorType::eInputAttachment, 1000}
-    };
+    std::vector<vk::DescriptorPoolSize> poolSizes = {{vk::DescriptorType::eSampler, 1000},
+                                                     {vk::DescriptorType::eCombinedImageSampler, 1000},
+                                                     {vk::DescriptorType::eSampledImage, 1000},
+                                                     {vk::DescriptorType::eStorageImage, 1000},
+                                                     {vk::DescriptorType::eUniformTexelBuffer, 1000},
+                                                     {vk::DescriptorType::eStorageTexelBuffer, 1000},
+                                                     {vk::DescriptorType::eUniformBuffer, 1000},
+                                                     {vk::DescriptorType::eStorageBuffer, 1000},
+                                                     {vk::DescriptorType::eUniformBufferDynamic, 1000},
+                                                     {vk::DescriptorType::eStorageBufferDynamic, 1000},
+                                                     {vk::DescriptorType::eInputAttachment, 1000}};
 
-    vk::DescriptorPoolCreateInfo poolInfo{
-        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        100, static_cast<uint32_t>(poolSizes.size()),
-        poolSizes.data()
-    };
+    vk::DescriptorPoolCreateInfo poolInfo{vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, 100,
+                                          static_cast<uint32_t>(poolSizes.size()), poolSizes.data()};
 
     descriptorPool = context->device->createDescriptorPoolUnique(poolInfo);
 
     ImGui::CreateContext();
     auto glfwWindow = std::reinterpret_pointer_cast<GLFWWindow>(window);
-    ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow *>(glfwWindow->window), true);
+    ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(glfwWindow->window), true);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = context->instance.get();
     init_info.PhysicalDevice = context->physicalDevice;
@@ -129,12 +121,11 @@ void ImguiManager::init() {
     init_info.Queue = context->queues[VulkanContext::Queue::GRAPHICS].queue;
     init_info.DescriptorPool = static_cast<VkDescriptorPool>(descriptorPool.get());
     init_info.MinImageCount = 2;
-    init_info.ImageCount = swapchain->imageCount + 1;
+    // Use the real number of swapchain images, not the requested count (VKGS-018).
+    init_info.ImageCount = static_cast<uint32_t>(swapchain->swapchainImages.size());
     init_info.UseDynamicRendering = true;
     init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    init_info.PipelineRenderingCreateInfo = vk::PipelineRenderingCreateInfo{
-        {}, 1, &swapchain->swapchainFormat
-    };
+    init_info.PipelineRenderingCreateInfo = vk::PipelineRenderingCreateInfo{{}, 1, &swapchain->swapchainFormat};
 
     ImGui_ImplVulkan_Init(&init_info);
 
@@ -161,16 +152,16 @@ void ImguiManager::immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& fu
     }
 }
 
-void ImguiManager::draw(vk::CommandBuffer commandBuffer, uint32_t currentImageIndex, std::function<void(void)> imguiFunction) {
+void ImguiManager::draw(vk::CommandBuffer commandBuffer, uint32_t currentImageIndex,
+                        std::function<void(void)> imguiFunction) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
     imguiFunction();
     ImGui::Render();
 
-    vk::RenderingAttachmentInfoKHR attachment_info{
-        swapchain->swapchainImages[currentImageIndex]->imageView.get(), vk::ImageLayout::eColorAttachmentOptimal
-    };
+    vk::RenderingAttachmentInfoKHR attachment_info{swapchain->swapchainImages[currentImageIndex]->imageView.get(),
+                                                   vk::ImageLayout::eColorAttachmentOptimal};
     vk::RenderingInfoKHR rendering_info{{}, vk::Rect2D{{0, 0}, swapchain->swapchainExtent}, 1, {}, 1, &attachment_info};
     commandBuffer.beginRenderingKHR(rendering_info);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);

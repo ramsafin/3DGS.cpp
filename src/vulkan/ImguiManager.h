@@ -1,15 +1,16 @@
 #ifndef IMGUIMANAGER_H
 #define IMGUIMANAGER_H
 
-#include <functional>
-
-#include "VulkanContext.h"
 #include "Swapchain.h"
+#include "VulkanContext.h"
 #include "Window.h"
 
+#include <functional>
+
 class ImguiManager {
-public:
-    ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain, std::shared_ptr<Window> window);
+  public:
+    ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain,
+                 std::shared_ptr<Window> window);
 
     void createCommandPool();
 
@@ -22,7 +23,7 @@ public:
 
     ~ImguiManager();
 
-private:
+  private:
     std::shared_ptr<VulkanContext> context;
     std::shared_ptr<Swapchain> swapchain;
     std::shared_ptr<Window> window;
@@ -32,6 +33,4 @@ private:
     vk::UniqueDescriptorPool descriptorPool;
 };
 
-
-
-#endif //IMGUIMANAGER_H
+#endif // IMGUIMANAGER_H

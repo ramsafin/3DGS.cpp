@@ -1,77 +1,102 @@
-cmake_minimum_required(VERSION 3.26)
-project(3dgs_cpp)
+include(GNUInstallDirs)
 
 add_subdirectory(shaders)
 
-file(GLOB SOURCE
-        *.cpp
-        vulkan/*.cpp
-        vulkan/pipelines/*.cpp)
-
-list(REMOVE_ITEM SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/GUIManager.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/DummyGUIManager.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/ImguiManager.cpp)
-
-set(EXTERNAL_SOURCE)
-
-if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
-    list(APPEND SOURCE
-            ${CMAKE_CURRENT_SOURCE_DIR}/GUIManager.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/ImguiManager.cpp
-            ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/windowing/GLFWWindow.cpp)
-
-    file(GLOB EXTERNAL_SOURCE
-            ${imgui_SOURCE_DIR}/*.cpp
-            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
-            ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
-            third_party/implot/implot.cpp
-            third_party/implot/implot_demo.cpp
-            third_party/implot/implot_items.cpp)
-else ()
-    list(APPEND SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/DummyGUIManager.cpp)
-endif ()
-
-add_library(3dgs_cpp STATIC
-        ${SOURCE}
-        ${EXTERNAL_SOURCE}
+set(VKGS_CORE_SOURCES
+    3dgs.cpp
+    GSScene.cpp
+    Renderer.cpp
+    vulkan/Buffer.cpp
+    vulkan/DescriptorSet.cpp
+    vulkan/OffscreenRenderTarget.cpp
+    vulkan/QueryManager.cpp
+    vulkan/Shader.cpp
+    vulkan/Swapchain.cpp
+    vulkan/Utils.cpp
+    vulkan/VMA.cpp
+    vulkan/VulkanContext.cpp
+    vulkan/pipelines/ComputePipeline.cpp
+    vulkan/pipelines/Pipeline.cpp
 )
 
-target_compile_definitions(3dgs_cpp PRIVATE
-  VULKAN_HPP_TYPESAFE_CONVERSION=1
-  VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
-)
+if(VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    list(APPEND VKGS_CORE_SOURCES
+        GUIManager.cpp
+        vulkan/ImguiManager.cpp
+        vulkan/windowing/GLFWWindow.cpp
+    )
+else()
+    list(APPEND VKGS_CORE_SOURCES DummyGUIManager.cpp)
+endif()
 
-if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
-    target_compile_definitions(3dgs_cpp PUBLIC VKGS_RENDER_MODE_ONSCREEN VKGS_ENABLE_GLFW)
-else ()
-    target_compile_definitions(3dgs_cpp PUBLIC VKGS_RENDER_MODE_OFFSCREEN)
-endif ()
+if(VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    add_library(imgui STATIC
+        ${imgui_SOURCE_DIR}/imgui.cpp
+        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+        ${imgui_SOURCE_DIR}/imgui_draw.cpp
+        ${imgui_SOURCE_DIR}/imgui_tables.cpp
+        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+        ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+    )
+    add_library(imgui::imgui ALIAS imgui)
+    target_include_directories(imgui SYSTEM PUBLIC
+        ${imgui_SOURCE_DIR}
+        ${imgui_SOURCE_DIR}/backends
+    )
+    target_link_libraries(imgui PRIVATE Vulkan::Vulkan glfw)
+
+    add_library(implot STATIC
+        third_party/implot/implot.cpp
+        third_party/implot/implot_demo.cpp
+        third_party/implot/implot_items.cpp
+    )
+    add_library(implot::implot ALIAS implot)
+    target_include_directories(implot SYSTEM PUBLIC third_party)
+    target_link_libraries(implot PUBLIC imgui::imgui)
+endif()
+
+add_library(3dgs_cpp STATIC ${VKGS_CORE_SOURCES})
+add_library(3dgs::3dgs ALIAS 3dgs_cpp)
+
+target_compile_features(3dgs_cpp PUBLIC cxx_std_20)
 
 target_include_directories(3dgs_cpp
-        PUBLIC
-        ${CMAKE_SOURCE_DIR}/include/3dgs
-        PRIVATE
-        third_party
-        ${Vulkan_INCLUDE_DIRS}
-        ${GLM_INCLUDE_DIRS}
-        ${glm_SOURCE_DIR}
-        ${spdlog_SOURCE_DIR}/include
-        ${CMAKE_BINARY_DIR}/shaders
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
 
-if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
-    target_include_directories(3dgs_cpp PRIVATE
-            ${imgui_SOURCE_DIR}
-            ${imgui_SOURCE_DIR}/backends)
-endif ()
+target_compile_definitions(3dgs_cpp
+    PRIVATE
+        VULKAN_HPP_TYPESAFE_CONVERSION=1
+        VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+        $<$<CONFIG:Debug>:DEBUG>
+        $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+)
 
-add_dependencies(3dgs_cpp shaders)
+if(VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    target_compile_definitions(3dgs_cpp PUBLIC VKGS_RENDER_MODE_ONSCREEN VKGS_ENABLE_GLFW)
+else()
+    target_compile_definitions(3dgs_cpp PUBLIC VKGS_RENDER_MODE_OFFSCREEN)
+endif()
 
-target_link_libraries(3dgs_cpp PUBLIC Vulkan::Vulkan spdlog::spdlog)
-if (VKGS_RENDER_MODE STREQUAL "ONSCREEN")
-    target_link_libraries(3dgs_cpp PUBLIC glfw)
-endif ()
-if (UNIX)
-    target_link_libraries(3dgs_cpp PUBLIC ${CMAKE_DL_LIBS})
-endif ()
+target_link_libraries(3dgs_cpp
+    PRIVATE
+        Vulkan::Vulkan
+        spdlog::spdlog
+        glm::glm
+        vkgs_generated_shaders
+)
+add_dependencies(3dgs_cpp vkgs_shaders)
+
+if(VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+    target_link_libraries(3dgs_cpp PRIVATE glfw imgui::imgui implot::implot)
+endif()
+
+if(CMAKE_DL_LIBS)
+    target_link_libraries(3dgs_cpp PRIVATE ${CMAKE_DL_LIBS})
+endif()

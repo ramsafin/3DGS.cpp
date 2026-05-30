@@ -19,6 +19,7 @@ layout (std140, set = 1, binding = 0) uniform Params {
     uint height;
     float tan_fovx;
     float tan_fovy;
+    float near_plane;
 };
 
 layout (std430, set = 1, binding = 1) writeonly buffer VertexAttributes {
@@ -74,7 +75,10 @@ vec3 compute_sh() {
     uint index = gl_GlobalInvocationID.x;
 
     vec3 ray_direction = vertices[index].position.xyz - camera_position.xyz;
-    ray_direction /= length(ray_direction);
+    float ray_length = length(ray_direction);
+    if (ray_length > 1e-8) {
+        ray_direction /= ray_length;
+    }
     float x = ray_direction.x, y = ray_direction.y, z = ray_direction.z;
 
     vec3 c = SH_C0 * get_sh_vec3(0);
@@ -99,11 +103,10 @@ vec3 compute_sh() {
 
     c += 0.5;
 
-    if (c.x < 0.0) {
-        c.x = 0.0;
-    }
+    // Clamp every channel, not just red (VKGS-015), so negative SH evaluations
+    // cannot produce negative colour components.
+    c = max(c, vec3(0.0));
 
-//    assert(all(lessThanEqual(c, vec3(159.0))), "invalid sh: %f %f %f\n", c);
     return c;
 }
 
@@ -117,24 +120,24 @@ void main() {
     if (index >= vertices.length()) {
         return;
     }
-    if (index == 0) {
-//        debugPrintfEXT("width: %d, height: %d, tan_fovx: %f, tan_fovy: %f\n", width, height, tan_fovx, tan_fovy);
-    }
-
     ivec2 tile_shape = ivec2((width + TILE_WIDTH - 1) / TILE_WIDTH, (height + TILE_HEIGHT - 1) / TILE_HEIGHT);
-//    assert(tile_shape.x == 50 && tile_shape.y == 38, "invalid tile shape: %d %d\n", tile_shape);
 
     attr[index].color_radii.w = 0.0;
     tiles_overlap[index] = 0;
 
-    vec4 p_hom = proj_mat * vertices[index].position;
-    float p_w = 1.0f / p_hom.w;
-    vec3 ndc = vec3(p_hom.xyz * p_w);
-
+    // Cull against the near plane in view space first (VKGS-015) so the
+    // perspective divide below never operates on a behind-camera splat.
     vec4 p_view = view_mat * vertices[index].position;
-    if (p_view.z <= 0.2f) {
+    if (p_view.z <= near_plane) {
         return;
     }
+
+    vec4 p_hom = proj_mat * vertices[index].position;
+    if (abs(p_hom.w) < 1e-8) {
+        return;
+    }
+    float p_w = 1.0f / p_hom.w;
+    vec3 ndc = vec3(p_hom.xyz * p_w);
 
     mat2 cov2d = compute_cov2d(p_view.xyz);
     float det = determinant(cov2d);
@@ -150,11 +153,6 @@ void main() {
     float lambda2 = mid - sqrt(max(0.1, mid * mid - det));
     float lambda = max(lambda1, lambda2);
     float radii = ceil(3.0 * sqrt(lambda));
-//    if (radii > 2.0) {
-//        debugPrintfEXT("lambda: %f, radii: %f\n", lambda, radii);
-//    }
-
-//    vec2 uv = vec2((ndc.x + 1.0) * 0.5 * width, (ndc.y + 1.0) * 0.5 * height);
     vec2 uv = vec2(ndc2Pix(ndc.x, int(width)), ndc2Pix(ndc.y, int(height)));
 
     uvec4 bounding_box = uvec4(
@@ -164,20 +162,16 @@ void main() {
             uint(clamp(int((uv.y + radii + TILE_HEIGHT - 1) / TILE_HEIGHT), 0, tile_shape.y))
     );
 
-//    debugPrintfEXT("radii: %f, uv: %f %f, aabb: %d %d %d %d\n", radii, uv.x, uv.y, ivec4(bounding_box));
-
     uint num_tiles_overlap = (bounding_box.z - bounding_box.x) * (bounding_box.w - bounding_box.y);
     if (num_tiles_overlap == 0) {
         return;
     }
     assert(num_tiles_overlap <= width * height, "too many tiles overlap: %d\n", num_tiles_overlap);
     attr[index].aabb = bounding_box;
-//    assert(bounding_box.x < bounding_box.z && bounding_box.y < bounding_box.w, "invalid aabb: %d %d %d %d\n", ivec4(bounding_box));
     tiles_overlap[index] = num_tiles_overlap;
     attr[index].depth = p_view.z;
     attr[index].color_radii.w = radii;
     attr[index].color_radii.xyz = compute_sh();
     attr[index].uv = uv;
     attr[index].magic = MAGIC;
-//    attr[index*2].magic = MAGIC;
 }

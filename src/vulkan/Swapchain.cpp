@@ -2,10 +2,12 @@
 
 #include "glm/glm.hpp"
 #include "spdlog/spdlog.h"
+
 #include <vk_enum_string_helper.h>
 
 Swapchain::Swapchain(const std::shared_ptr<VulkanContext>& context, const std::shared_ptr<Window>& window,
-                     bool immediate) : context(context), window(window), immediate(immediate) {
+                     bool immediate)
+    : context(context), window(window), immediate(immediate) {
     createSwapchain();
     createSwapchainImages();
 }
@@ -20,7 +22,7 @@ void Swapchain::createSwapchain() {
     auto [width, height] = window->getFramebufferSize();
 
     surfaceFormat = formats[0];
-    for (const auto& availableFormat: formats) {
+    for (const auto& availableFormat : formats) {
         if (availableFormat.format == vk::Format::eB8G8R8A8Unorm &&
             availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
             surfaceFormat = availableFormat;
@@ -30,7 +32,7 @@ void Swapchain::createSwapchain() {
     spdlog::debug("Surface format: {}", string_VkFormat(static_cast<VkFormat>(surfaceFormat.format)));
 
     presentMode = vk::PresentModeKHR::eFifo;
-    for (const auto& availablePresentMode: presentModes) {
+    for (const auto& availablePresentMode : presentModes) {
         if (immediate && availablePresentMode == vk::PresentModeKHR::eImmediate) {
             presentMode = availablePresentMode;
             break;
@@ -49,14 +51,15 @@ void Swapchain::createSwapchain() {
         extent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
     }
 
-    spdlog::debug("Swapchain extent range: {}x{} - {}x{}", capabilities.minImageExtent.width, capabilities.minImageExtent.height,
-                  capabilities.maxImageExtent.width, capabilities.maxImageExtent.height);
+    spdlog::debug("Swapchain extent range: {}x{} - {}x{}", capabilities.minImageExtent.width,
+                  capabilities.minImageExtent.height, capabilities.maxImageExtent.width,
+                  capabilities.maxImageExtent.height);
 
+    // Request one extra image for triple buffering, clamped to the device limit
+    // (maxImageCount == 0 means "no upper bound") (VKGS-018).
     imageCount = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
         imageCount = capabilities.maxImageCount;
-    } else if (capabilities.maxImageCount == 0) {
-        imageCount = capabilities.minImageCount;
     }
 
     vk::SwapchainCreateInfoKHR createInfo = {};
@@ -68,17 +71,19 @@ void Swapchain::createSwapchain() {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage;
 
+    // Deduplicate by the real queue-family index, not the Queue::Type enum key
+    // (VKGS-003). Concurrent sharing requires distinct family indices.
     std::vector<uint32_t> uniqueQueueFamilies;
-    for (auto& queue: context->queues) {
-        if (std::find(uniqueQueueFamilies.begin(), uniqueQueueFamilies.end(), queue.first) ==
+    for (auto& queue : context->queues) {
+        if (std::find(uniqueQueueFamilies.begin(), uniqueQueueFamilies.end(), queue.second.queueFamily) ==
             uniqueQueueFamilies.end()) {
-            uniqueQueueFamilies.push_back(queue.first);
+            uniqueQueueFamilies.push_back(queue.second.queueFamily);
         }
     }
 
     if (uniqueQueueFamilies.size() > 1) {
         createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = (uint32_t) uniqueQueueFamilies.size();
+        createInfo.queueFamilyIndexCount = (uint32_t)uniqueQueueFamilies.size();
         createInfo.pQueueFamilyIndices = uniqueQueueFamilies.data();
     } else {
         createInfo.imageSharingMode = vk::SharingMode::eExclusive;
@@ -88,6 +93,8 @@ void Swapchain::createSwapchain() {
     createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
+    // Reuse resources from the previous swapchain during recreation (VKGS-017).
+    createInfo.oldSwapchain = swapchain ? swapchain.get() : vk::SwapchainKHR{};
 
     spdlog::debug("Swapchain extent: {}x{}. Preferred extent: {}x{}", extent.width, extent.height, width, height);
     swapchainExtent = extent;
@@ -98,22 +105,18 @@ void Swapchain::createSwapchain() {
 }
 
 void Swapchain::createSwapchainImages() {
+    // Reset per-image state so recreation does not accumulate stale image views
+    // and acquire semaphores (VKGS-017).
+    swapchainImages.clear();
+    imageAvailableSemaphores.clear();
+
     auto images = context->device->getSwapchainImagesKHR(*swapchain);
 
-    for (auto& image: images) {
-        auto imageView = context->device->createImageViewUnique({
-            {}, image, vk::ImageViewType::e2D,
-            swapchainFormat, {},
-            {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}
-        });
-        swapchainImages.push_back(std::make_shared<Image>(
-                image,
-                std::move(imageView),
-                swapchainFormat,
-                swapchainExtent,
-                std::nullopt
-            )
-        );
+    for (auto& image : images) {
+        auto imageView = context->device->createImageViewUnique(
+            {{}, image, vk::ImageViewType::e2D, swapchainFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
+        swapchainImages.push_back(
+            std::make_shared<Image>(image, std::move(imageView), swapchainFormat, swapchainExtent, std::nullopt));
     }
 
     for (int i = 0; i < swapchainImages.size(); i++) {
@@ -123,9 +126,10 @@ void Swapchain::createSwapchainImages() {
 
 void Swapchain::recreate() {
     context->device->waitIdle();
-    swapchain.reset();
-    swapchainImages.clear();
 
+    // Keep the old swapchain alive across createSwapchain so it can be passed as
+    // oldSwapchain; the unique handle frees it once the new one is built. Image
+    // views and semaphores are reset inside createSwapchainImages (VKGS-017).
     createSwapchain();
     createSwapchainImages();
     spdlog::debug("Swapchain recreated");

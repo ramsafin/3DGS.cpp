@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "3dgs_viewer: Windows MSVC Debug",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/windows-msvc-onscreen-debug/apps/viewer/3dgs_viewer.exe",
+      "args": [
+        "${input:scenePath}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "cmake: build Windows on-screen Debug"
+    },
+    {
+      "name": "3dgs_render: Windows MSVC Off-screen Debug",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/windows-msvc-offscreen-debug/apps/offscreen/3dgs_render.exe",
+      "args": [
+        "--config",
+        "${input:renderConfigPath}"
+      ],
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "cmake: build Windows off-screen Debug"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "scenePath",
+      "type": "promptString",
+      "description": "Path to a Gaussian Splatting scene file"
+    },
+    {
+      "id": "renderConfigPath",
+      "type": "promptString",
+      "description": "Path to an off-screen render JSON config",
+      "default": "${workspaceFolder}/apps/offscreen/examples/simple_render.json"
+    }
+  ]
+}
