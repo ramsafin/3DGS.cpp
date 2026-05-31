@@ -1,4 +1,4 @@
-#include "PpmWriter.h"
+#include "PpmWriter.hpp"
 
 #include <fstream>
 #include <stdexcept>

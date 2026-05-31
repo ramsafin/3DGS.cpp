@@ -1,7 +1,7 @@
 #include "args.hxx"
 #include "spdlog/spdlog.h"
 
-#include <3dgs/Viewer.h>
+#include <3dgs/Viewer.hpp>
 #include <filesystem>
 #include <iostream>
 #include <utility>

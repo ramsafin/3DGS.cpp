@@ -1,6 +1,6 @@
-#include "VulkanContext.h"
+#include "VulkanContext.hpp"
 
-#include "StringList.h"
+#include "StringList.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -216,7 +216,7 @@ void VulkanContext::selectPhysicalDevice(std::optional<uint8_t> id, std::optiona
     spdlog::info("Available physical devices:");
     int ind = 0;
     for (auto& device : devices) {
-        spdlog::info("[{}] {}", ind++, device.getProperties().deviceName);
+        spdlog::info("[{}] {}", ind++, device.getProperties().deviceName.data());
     }
 
     if (surface.has_value()) {
@@ -232,7 +232,7 @@ void VulkanContext::selectPhysicalDevice(std::optional<uint8_t> id, std::optiona
         if (!reasons.empty()) {
             throw std::runtime_error("Selected Vulkan physical device is unsuitable: " + joinReasons(reasons));
         }
-        spdlog::info("Selected physical device (by index): {}", physicalDevice.getProperties().deviceName);
+        spdlog::info("Selected physical device (by index): {}", physicalDevice.getProperties().deviceName.data());
         updateSelectedDeviceCapabilities();
         return;
     }
@@ -243,7 +243,7 @@ void VulkanContext::selectPhysicalDevice(std::optional<uint8_t> id, std::optiona
         if (reasons.empty()) {
             suitableDevices.push_back(device);
         } else {
-            spdlog::warn("Skipping Vulkan physical device '{}': {}", device.getProperties().deviceName,
+            spdlog::warn("Skipping Vulkan physical device '{}': {}", device.getProperties().deviceName.data(),
                          joinReasons(reasons));
         }
     }
@@ -261,7 +261,7 @@ void VulkanContext::selectPhysicalDevice(std::optional<uint8_t> id, std::optiona
         }
     }
 
-    spdlog::info("Selected physical device (automatically): {}", physicalDevice.getProperties().deviceName);
+    spdlog::info("Selected physical device (automatically): {}", physicalDevice.getProperties().deviceName.data());
     updateSelectedDeviceCapabilities();
 }
 

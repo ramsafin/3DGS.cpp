@@ -1,5 +1,5 @@
-#include "GpuConstants.h"
-#include "render/PassSizing.h"
+#include "GpuConstants.hpp"
+#include "render/PassSizing.hpp"
 
 #include <gtest/gtest.h>
 

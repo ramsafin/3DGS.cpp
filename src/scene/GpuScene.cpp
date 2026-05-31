@@ -1,13 +1,13 @@
-#include "GpuScene.h"
+#include "GpuScene.hpp"
 
-#include "GpuConstants.h"
-#include "core/CheckedArithmetic.h"
-#include "render/RenderConstants.h"
+#include "GpuConstants.hpp"
+#include "core/CheckedArithmetic.hpp"
+#include "render/RenderConstants.hpp"
 #include "shaders.h"
 #include "spdlog/spdlog.h"
-#include "vulkan/DescriptorSet.h"
-#include "vulkan/Shader.h"
-#include "vulkan/pipelines/ComputePipeline.h"
+#include "vulkan/DescriptorSet.hpp"
+#include "vulkan/Shader.hpp"
+#include "vulkan/pipelines/ComputePipeline.hpp"
 
 #include <span>
 #include <utility>

@@ -1,8 +1,8 @@
-#include <3dgs/Viewer.h>
+#include <3dgs/Viewer.hpp>
 
-#include "session/ViewerSession.h"
-#include "vulkan/Window.h"
-#include "vulkan/windowing/GLFWWindow.h"
+#include "session/ViewerSession.hpp"
+#include "vulkan/Window.hpp"
+#include "vulkan/windowing/GLFWWindow.hpp"
 
 #include <utility>
 

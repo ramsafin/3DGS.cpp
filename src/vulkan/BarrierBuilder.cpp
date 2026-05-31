@@ -1,6 +1,6 @@
-#include "BarrierBuilder.h"
+#include "BarrierBuilder.hpp"
 
-#include "Buffer.h"
+#include "Buffer.hpp"
 
 namespace vkgs::vulkan {
 

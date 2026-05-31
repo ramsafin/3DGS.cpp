@@ -1,6 +1,6 @@
-#include "Shader.h"
+#include "Shader.hpp"
 
-#include "core/FileIO.h"
+#include "core/FileIO.hpp"
 
 #include <cstdint>
 #include <cstring>

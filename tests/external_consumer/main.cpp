@@ -1,4 +1,4 @@
-#include <3dgs/OffscreenRenderer.h>
+#include <3dgs/OffscreenRenderer.hpp>
 
 #include <utility>
 

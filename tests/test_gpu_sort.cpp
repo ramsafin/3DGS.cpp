@@ -1,14 +1,14 @@
-#include "test_support.h"
+#include "test_support.hpp"
 
-#include "GpuConstants.h"
-#include "render/PassSizing.h"
-#include "render/GpuTypes.h"
+#include "GpuConstants.hpp"
+#include "render/PassSizing.hpp"
+#include "render/GpuTypes.hpp"
 #include "shaders.h"
-#include "vulkan/Buffer.h"
-#include "vulkan/DescriptorSet.h"
-#include "vulkan/Shader.h"
-#include "vulkan/VulkanContext.h"
-#include "vulkan/pipelines/ComputePipeline.h"
+#include "vulkan/Buffer.hpp"
+#include "vulkan/DescriptorSet.hpp"
+#include "vulkan/Shader.hpp"
+#include "vulkan/VulkanContext.hpp"
+#include "vulkan/pipelines/ComputePipeline.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,6 +1,6 @@
-#include "OffscreenSession.h"
+#include "OffscreenSession.hpp"
 
-#include "render/RendererConfiguration.h"
+#include "render/RendererConfiguration.hpp"
 
 #include <utility>
 

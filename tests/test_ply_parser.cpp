@@ -1,5 +1,5 @@
-#include "scene/PlyReader.h"
-#include "test_support.h"
+#include "scene/PlyReader.hpp"
+#include "test_support.hpp"
 
 #include <gtest/gtest.h>
 

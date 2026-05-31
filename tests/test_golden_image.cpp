@@ -1,4 +1,4 @@
-#include "test_support.h"
+#include "test_support.hpp"
 
 #include <gtest/gtest.h>
 
@@ -9,7 +9,7 @@
 #include <vector>
 
 #ifdef VKGS_RENDER_MODE_OFFSCREEN
-#include <3dgs/OffscreenRenderer.h>
+#include <3dgs/OffscreenRenderer.hpp>
 
 namespace fs = std::filesystem;
 

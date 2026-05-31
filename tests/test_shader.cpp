@@ -1,4 +1,4 @@
-#include "vulkan/Shader.h"
+#include "vulkan/Shader.hpp"
 
 #include <gtest/gtest.h>
 

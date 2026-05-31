@@ -4,14 +4,6 @@ CompileFlags:
     - -std=c++20
 Index:
   Background: Build
-Diagnostics:
-  ClangTidy:
-    Add:
-      - bugprone-*
-      - performance-*
-      - portability-*
-    Remove:
-      - bugprone-easily-swappable-parameters
 Completion:
   AllScopes: true
 InlayHints:

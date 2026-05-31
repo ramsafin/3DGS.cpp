@@ -1,4 +1,4 @@
-#include "vulkan/DeviceRequirements.h"
+#include "vulkan/DeviceRequirements.hpp"
 
 #include <gtest/gtest.h>
 

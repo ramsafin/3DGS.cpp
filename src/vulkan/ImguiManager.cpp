@@ -1,9 +1,9 @@
-#include "ImguiManager.h"
+#include "ImguiManager.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-#include "windowing/GLFWWindow.h"
+#include "windowing/GLFWWindow.hpp"
 
 ImguiManager::ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain,
                            std::shared_ptr<GLFWWindow> window)

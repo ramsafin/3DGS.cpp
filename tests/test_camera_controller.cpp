@@ -1,4 +1,4 @@
-#include "CameraController.h"
+#include "CameraController.hpp"
 
 #include <gtest/gtest.h>
 

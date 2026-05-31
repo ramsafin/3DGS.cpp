@@ -1,4 +1,4 @@
-#include "DeviceRequirements.h"
+#include "DeviceRequirements.hpp"
 
 #include <algorithm>
 

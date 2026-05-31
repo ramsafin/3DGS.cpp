@@ -1,6 +1,6 @@
-#include <3dgs/OffscreenRenderer.h>
+#include <3dgs/OffscreenRenderer.hpp>
 
-#include "session/OffscreenSession.h"
+#include "session/OffscreenSession.hpp"
 
 #include <utility>
 

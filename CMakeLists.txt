@@ -9,91 +9,59 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-include(FetchContent)
-include(CMakePackageConfigHelpers)
-include(GNUInstallDirs)
+# spdlog's bundled {fmt} requires UTF-8 source/execution charset on MSVC.
+if(MSVC)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
+endif()
 
 option(VKGS_BUILD_VIEWER "Build GLFW/ImGui viewer support and the viewer application" ON)
 option(VKGS_BUILD_OFFSCREEN_APP "Build the off-screen rendering application" ON)
+
 option(VKGS_BUILD_TESTS "Build unit and integration tests" OFF)
 option(VKGS_VERBOSE_CONFIGURE "Print dependency and toolchain resolution details" ON)
 
+include(cmake/Helpers.cmake)
+
+# Dependencies
+# - GLM
+# - spdlog
+# - Vulkan Headers
+# - GTest (optional)
+# - glfw (optional)
+# - imgui (optional)
+# - nlohmann_json (optional)
+include(cmake/Dependencies.cmake)
+
 find_package(Vulkan REQUIRED)
 
-set(VKGS_HOST_TOOL_HINTS)
-if(WIN32)
-    file(GLOB VKGS_HOST_PYTHON_HINTS LIST_DIRECTORIES true
-        "$ENV{LOCALAPPDATA}/Programs/Python/Python*"
-    )
-    file(GLOB VKGS_HOST_VULKAN_SDK_HINTS LIST_DIRECTORIES true
-        "C:/VulkanSDK/*/Bin"
-        "C:/VulkanSDK/*/bin"
-    )
-    list(APPEND VKGS_HOST_TOOL_HINTS ${VKGS_HOST_VULKAN_SDK_HINTS})
-endif()
+# Host tools
+# - Python Interpreter
+# - Vulkan SDK (glslangValidator)
+include(cmake/HostTools.cmake)
 
-find_program(VKGS_HOST_PYTHON_EXECUTABLE
-    NAMES python3 python python.exe
-    HINTS
-        ${VKGS_HOST_PYTHON_HINTS}
-    NO_CMAKE_FIND_ROOT_PATH
-)
-if(NOT VKGS_HOST_PYTHON_EXECUTABLE)
-    message(FATAL_ERROR
-        "Could not find a host Python interpreter. "
-        "Set VKGS_HOST_PYTHON_EXECUTABLE to a Python executable that runs on the build machine."
-    )
-endif()
-
-find_program(VKGS_GLSLANG_VALIDATOR
-    NAMES glslangValidator glslangValidator.exe
-    HINTS
-        "$ENV{VULKAN_SDK}/Bin"
-        "$ENV{VULKAN_SDK}/bin"
-        ${VKGS_HOST_TOOL_HINTS}
-    NO_CMAKE_FIND_ROOT_PATH
-)
-if(NOT VKGS_GLSLANG_VALIDATOR)
-    message(FATAL_ERROR
-        "Could not find host glslangValidator. "
-        "Set VKGS_GLSLANG_VALIDATOR or install the Vulkan SDK on the build machine."
-    )
-endif()
-
-function(vkgs_status label value)
-    if(VKGS_VERBOSE_CONFIGURE)
-        message(STATUS "[vkgs] ${label}: ${value}")
-    endif()
-endfunction()
-
+message(STATUS "")
+vkgs_status("Target system" "${CMAKE_SYSTEM_NAME}")
+vkgs_status("Target arch/platform" "${CMAKE_SYSTEM_PROCESSOR}")
+vkgs_status("Target compiler" "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+vkgs_status("C++ compiler" "${CMAKE_CXX_COMPILER}")
 vkgs_status("Generator" "${CMAKE_GENERATOR}")
 vkgs_status("Build type" "${CMAKE_BUILD_TYPE}")
-vkgs_status("C compiler" "${CMAKE_C_COMPILER}")
-vkgs_status("C++ compiler" "${CMAKE_CXX_COMPILER}")
 vkgs_status("Build viewer" "${VKGS_BUILD_VIEWER}")
 vkgs_status("Build off-screen app" "${VKGS_BUILD_OFFSCREEN_APP}")
 vkgs_status("Vulkan include dirs" "${Vulkan_INCLUDE_DIRS}")
 vkgs_status("Vulkan library" "${Vulkan_LIBRARY}")
 vkgs_status("Host glslangValidator" "${VKGS_GLSLANG_VALIDATOR}")
 vkgs_status("Host Python" "${VKGS_HOST_PYTHON_EXECUTABLE}")
+message(STATUS "")
 
-if (CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
     vkgs_status("OHOS SDK native root" "$ENV{OHOS_SDK_NATIVE}")
     vkgs_status("OHOS architecture" "${OHOS_ARCH}")
     vkgs_status("OHOS STL" "${OHOS_STL}")
+    message(STATUS "")
 endif()
 
-include(cmake/Dependencies.cmake)
-add_subdirectory(src)
-
-if(VKGS_BUILD_VIEWER OR VKGS_BUILD_OFFSCREEN_APP)
-    add_subdirectory(apps)
-endif()
-
-if(VKGS_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
+include(cmake/TargetHelpers.cmake)
 
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     add_custom_target(vkgs_refresh_compile_commands
@@ -106,27 +74,15 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     )
 endif()
 
-install(TARGETS 3dgs_core
-    EXPORT 3dgsTargets
-    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-)
-install(DIRECTORY include/3dgs DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-install(EXPORT 3dgsTargets
-    FILE 3dgsTargets.cmake
-    NAMESPACE 3dgs::
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/3dgs"
-)
-configure_package_config_file(
-    cmake/3dgsConfig.cmake.in
-    "${CMAKE_CURRENT_BINARY_DIR}/3dgsConfig.cmake"
-    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/3dgs"
-)
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/3dgsConfigVersion.cmake"
-    COMPATIBILITY SameMajorVersion
-)
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/3dgsConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/3dgsConfigVersion.cmake"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/3dgs"
-)
+add_subdirectory(src)
+
+if(VKGS_BUILD_VIEWER OR VKGS_BUILD_OFFSCREEN_APP)
+    add_subdirectory(apps)
+endif()
+
+if(VKGS_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+include(cmake/Install.cmake)

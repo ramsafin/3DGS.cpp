@@ -1,4 +1,4 @@
-#include "CheckedArithmetic.h"
+#include "CheckedArithmetic.hpp"
 
 #include <limits>
 #include <stdexcept>

@@ -1,4 +1,4 @@
-#include "GLFWWindow.h"
+#include "GLFWWindow.hpp"
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <glm/ext/matrix_transform.hpp>

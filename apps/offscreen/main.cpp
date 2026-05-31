@@ -1,7 +1,7 @@
-#include <3dgs/OffscreenRenderer.h>
-#include "OutputFilename.h"
-#include "PpmWriter.h"
-#include "RenderJob.h"
+#include <3dgs/OffscreenRenderer.hpp>
+#include "OutputFilename.hpp"
+#include "PpmWriter.hpp"
+#include "RenderJob.hpp"
 
 #include <cstdint>
 #include <cstdlib>

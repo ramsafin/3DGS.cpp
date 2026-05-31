@@ -1,7 +1,7 @@
-#include "ViewerSession.h"
+#include "ViewerSession.hpp"
 
-#include "render/RendererConfiguration.h"
-#include "vulkan/Window.h"
+#include "render/RendererConfiguration.hpp"
+#include "vulkan/Window.hpp"
 
 #include <utility>
 

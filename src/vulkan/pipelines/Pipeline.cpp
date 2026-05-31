@@ -1,4 +1,4 @@
-#include "Pipeline.h"
+#include "Pipeline.hpp"
 
 #include <stdexcept>
 #include <utility>

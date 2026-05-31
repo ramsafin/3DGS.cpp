@@ -1,4 +1,4 @@
-#include "RenderJob.h"
+#include "RenderJob.hpp"
 
 #include <array>
 #include <fstream>

@@ -1,7 +1,7 @@
-#include "PassSizing.h"
+#include "PassSizing.hpp"
 
-#include "GpuConstants.h"
-#include "core/CheckedArithmetic.h"
+#include "GpuConstants.hpp"
+#include "core/CheckedArithmetic.hpp"
 
 #include <stdexcept>
 

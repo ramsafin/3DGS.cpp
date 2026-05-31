@@ -1,6 +1,6 @@
-#include "DescriptorSet.h"
+#include "DescriptorSet.hpp"
 
-#include "Buffer.h"
+#include "Buffer.hpp"
 
 #include <stdexcept>
 #include <string>

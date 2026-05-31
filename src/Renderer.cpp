@@ -1,19 +1,19 @@
-#include "Renderer.h"
+#include "Renderer.hpp"
 
-#include "render/GpuTypes.h"
-#include "render/PassSizing.h"
-#include "render/RenderConstants.h"
-#include "scene/PlyReader.h"
+#include "render/GpuTypes.hpp"
+#include "render/PassSizing.hpp"
+#include "render/RenderConstants.hpp"
+#include "scene/PlyReader.hpp"
 #include <fstream>
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
-#include "vulkan/Swapchain.h"
-#include "vulkan/windowing/GLFWWindow.h"
+#include "vulkan/Swapchain.hpp"
+#include "vulkan/windowing/GLFWWindow.hpp"
 #endif
 
-#include "GpuConstants.h"
+#include "GpuConstants.hpp"
 #include "shaders.h"
-#include "vulkan/BarrierBuilder.h"
+#include "vulkan/BarrierBuilder.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

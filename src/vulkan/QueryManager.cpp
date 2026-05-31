@@ -1,4 +1,4 @@
-#include "QueryManager.h"
+#include "QueryManager.hpp"
 
 #include <cmath>
 #include <stdexcept>

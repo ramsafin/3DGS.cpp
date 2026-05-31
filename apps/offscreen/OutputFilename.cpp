@@ -1,4 +1,4 @@
-#include "OutputFilename.h"
+#include "OutputFilename.hpp"
 
 #include <filesystem>
 #include <stdexcept>

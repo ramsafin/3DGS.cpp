@@ -1,6 +1,6 @@
-#include "PlyReader.h"
+#include "PlyReader.hpp"
 
-#include "GpuConstants.h"
+#include "GpuConstants.hpp"
 
 #include <array>
 #include <cmath>

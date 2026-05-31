@@ -1,10 +1,10 @@
-#include "test_support.h"
+#include "test_support.hpp"
 
-#include "scene/GpuScene.h"
-#include "scene/PlyReader.h"
-#include "vulkan/Buffer.h"
-#include "vulkan/DescriptorSet.h"
-#include "vulkan/VulkanContext.h"
+#include "scene/GpuScene.hpp"
+#include "scene/PlyReader.hpp"
+#include "vulkan/Buffer.hpp"
+#include "vulkan/DescriptorSet.hpp"
+#include "vulkan/VulkanContext.hpp"
 
 #include <gtest/gtest.h>
 

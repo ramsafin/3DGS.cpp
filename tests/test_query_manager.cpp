@@ -1,4 +1,4 @@
-#include "vulkan/QueryManager.h"
+#include "vulkan/QueryManager.hpp"
 
 #include <gtest/gtest.h>
 

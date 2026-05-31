@@ -1,7 +1,7 @@
-#include "Buffer.h"
+#include "Buffer.hpp"
 
-#include "BarrierBuilder.h"
-#include "DescriptorSet.h"
+#include "BarrierBuilder.hpp"
+#include "DescriptorSet.hpp"
 #include "spdlog/spdlog.h"
 
 #include <algorithm>

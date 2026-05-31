@@ -1,28 +1,53 @@
----
 Checks: >
-  -*,
   bugprone-*,
-  cert-dcl21-cpp,
-  cert-dcl58-cpp,
-  cert-err34-c,
-  cert-err52-cpp,
-  cert-err60-cpp,
-  cppcoreguidelines-interfaces-global-init,
-  cppcoreguidelines-pro-type-member-init,
-  cppcoreguidelines-slicing,
-  modernize-*,
+  clang-analyzer-*,
   performance-*,
-  portability-*,
-  readability-*,
-  -bugprone-easily-swappable-parameters,
-  -modernize-use-trailing-return-type,
-  -readability-function-cognitive-complexity,
-  -readability-identifier-length,
-  -readability-magic-numbers
+  modernize-avoid-c-arrays,
+  modernize-loop-convert,
+  modernize-make-unique,
+  modernize-raw-string-literal,
+  modernize-redundant-void-arg,
+  modernize-return-braced-init-list,
+  modernize-shrink-to-fit,
+  modernize-use-bool-literals,
+  modernize-use-default-member-init,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-equals-delete,
+  modernize-use-noexcept,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-std-numbers,
+  modernize-use-using,
+  cppcoreguidelines-avoid-c-arrays,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-no-malloc,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-vararg,
+  cppcoreguidelines-special-member-functions,
+  readability-const-return-type,
+  readability-identifier-length,
+  readability-redundant-*,
+  -readability-magic-numbers,
+  -google-readability-todo,
+  -modernize-use-trailing-return-type
+
 WarningsAsErrors: ''
-HeaderFilterRegex: '^(?!.*[\\/](src[\\/]third_party|apps[\\/]viewer[\\/]third_party|build[\\/]_deps)[\\/]).*$'
+HeaderFilterRegex: '(include|src|tests|apps)/.*'
 FormatStyle: file
+
 CheckOptions:
-  readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.FunctionCase: camelBack
-  readability-identifier-naming.VariableCase: camelBack
+  - key: bugprone-exception-escape.CheckMain
+    value: false
+  - key: modernize-use-nullptr.IgnoreMacros
+    value: true
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: 3
+  - key: readability-identifier-length.MinimumLoopCounterNameLength
+    value: 1
+  - key: readability-identifier-length.IgnoredVariableNames
+    value: 'x;y;z;t'
+  - key: readability-identifier-length.IgnoredParameterNames
+    value: 'x;y;z;t;i;j;k'
+  - key: readability-identifier-length.IgnoredLoopCounterNames
+    value: 'i;j;k'

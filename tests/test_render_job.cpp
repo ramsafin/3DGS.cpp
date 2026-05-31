@@ -1,5 +1,5 @@
-#include "PpmWriter.h"
-#include "RenderJob.h"
+#include "PpmWriter.hpp"
+#include "RenderJob.hpp"
 
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>

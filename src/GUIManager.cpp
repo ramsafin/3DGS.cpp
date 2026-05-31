@@ -1,4 +1,4 @@
-#include "GUIManager.h"
+#include "GUIManager.hpp"
 
 #include "imgui.h"
 #include "implot/implot.h"

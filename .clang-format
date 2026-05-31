@@ -1,19 +1,33 @@
----
-Language: Cpp
 BasedOnStyle: LLVM
 Standard: c++20
 IndentWidth: 4
-TabWidth: 4
-UseTab: Never
 ColumnLimit: 120
-BreakBeforeBraces: Attach
-AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
-PointerAlignment: Left
-ReferenceAlignment: Left
 DerivePointerAlignment: false
-SortIncludes: CaseSensitive
-IncludeBlocks: Regroup
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+UseTab: Never
+LineEnding: LF
+InsertNewlineAtEOF: true
+
+# Prefer readable vertical wrapping once a declaration or call no longer fits.
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+BreakConstructorInitializers: BeforeComma
+PackConstructorInitializers: Never
+
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseExpressionOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortCompoundRequirementOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: None
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: true
 NamespaceIndentation: None
 FixNamespaceComments: true
+SortIncludes: true

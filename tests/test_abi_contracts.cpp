@@ -1,6 +1,6 @@
-#include "core/CheckedArithmetic.h"
-#include "render/GpuTypes.h"
-#include "vulkan/pipelines/Pipeline.h"
+#include "core/CheckedArithmetic.hpp"
+#include "render/GpuTypes.hpp"
+#include "vulkan/pipelines/Pipeline.hpp"
 
 #include <gtest/gtest.h>
 

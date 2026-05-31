@@ -1,4 +1,4 @@
-#include "OffscreenRenderTarget.h"
+#include "OffscreenRenderTarget.hpp"
 
 #include <stdexcept>
 #include <utility>
