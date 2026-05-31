@@ -1,7 +1,7 @@
 // Single source of truth for constants shared across CPU dispatch code and
 // GLSL shaders (VKGS-014). This file contains ONLY preprocessor #define lines
 // so it is valid both as a GLSL include and as a C++ preprocessor include
-// (see src/GpuConstants.h, which wraps these into typed constexpr values).
+// (see src/GpuConstants.hpp, which wraps these into typed constexpr values).
 #ifndef VKGS_SHARED_CONSTANTS_GLSL
 #define VKGS_SHARED_CONSTANTS_GLSL
 

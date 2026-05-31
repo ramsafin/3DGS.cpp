@@ -53,3 +53,69 @@ function(vkgs_configure_library target mode)
         target_link_libraries(${target} PRIVATE ${CMAKE_DL_LIBS})
     endif()
 endfunction()
+
+function(vkgs_add_header_check_target target mode)
+    set(options)
+    set(one_value_args)
+    set(multi_value_args ROOTS)
+    cmake_parse_arguments(VKGS_HEADER_CHECK "${options}" "${one_value_args}" "${multi_value_args}" ${ARGN})
+
+    if(NOT VKGS_HEADER_CHECK_ROOTS)
+        message(FATAL_ERROR "vkgs_add_header_check_target requires at least one ROOTS entry")
+    endif()
+
+    set(headers)
+    foreach(root IN LISTS VKGS_HEADER_CHECK_ROOTS)
+        file(GLOB_RECURSE root_headers CONFIGURE_DEPENDS "${root}/*.hpp")
+        list(APPEND headers ${root_headers})
+    endforeach()
+    list(REMOVE_DUPLICATES headers)
+    list(SORT headers)
+
+    set(check_dir "${CMAKE_CURRENT_BINARY_DIR}/${target}")
+    file(MAKE_DIRECTORY "${check_dir}")
+
+    set(sources)
+    foreach(header IN LISTS headers)
+        file(RELATIVE_PATH header_id "${PROJECT_SOURCE_DIR}" "${header}")
+        string(MAKE_C_IDENTIFIER "${header_id}" source_name)
+        set(source "${check_dir}/${source_name}.cpp")
+
+        if(header MATCHES "^${PROJECT_SOURCE_DIR}/include/")
+            file(RELATIVE_PATH include_name "${PROJECT_SOURCE_DIR}/include" "${header}")
+            file(WRITE "${source}" "#include <${include_name}>\n")
+        else()
+            file(RELATIVE_PATH include_name "${CMAKE_CURRENT_SOURCE_DIR}" "${header}")
+            file(WRITE "${source}" "#include \"${include_name}\"\n")
+        endif()
+
+        list(APPEND sources "${source}")
+    endforeach()
+
+    add_library(${target} OBJECT ${sources})
+    target_compile_features(${target} PRIVATE cxx_std_20)
+    target_include_directories(${target} PRIVATE
+        ${PROJECT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party
+        ${glm_SOURCE_DIR}
+        ${spdlog_SOURCE_DIR}/include
+        ${vulkan_headers_SOURCE_DIR}/include
+        ${VKGS_SHADER_GENERATED_DIR}
+    )
+    target_compile_definitions(${target} PRIVATE
+        VULKAN_HPP_TYPESAFE_CONVERSION=1
+        VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+        VKGS_RENDER_MODE_${mode}
+        $<$<CONFIG:Debug>:DEBUG>
+        $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+    )
+    target_link_libraries(${target} PRIVATE
+        vkgs_vulkan_headers
+        Vulkan::Vulkan
+        glm::glm
+        spdlog::spdlog_header_only
+        vkgs_generated_shaders
+    )
+    add_dependencies(${target} vkgs_shaders)
+endfunction()

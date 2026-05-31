@@ -14,6 +14,8 @@ if(MSVC)
     add_compile_options($<$<COMPILE_LANGUAGE:CXX>:/utf-8>)
 endif()
 
+include(GNUInstallDirs)
+
 option(VKGS_BUILD_VIEWER "Build GLFW/ImGui viewer support and the viewer application" ON)
 option(VKGS_BUILD_OFFSCREEN_APP "Build the off-screen rendering application" ON)
 

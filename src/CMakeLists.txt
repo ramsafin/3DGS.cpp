@@ -37,6 +37,14 @@ add_library(3dgs::core ALIAS 3dgs_core)
 set_target_properties(3dgs_core PROPERTIES EXPORT_NAME core)
 vkgs_configure_library(3dgs_core OFFSCREEN)
 
+set(VKGS_HEADER_CHECK_ROOTS
+    "${PROJECT_SOURCE_DIR}/include/3dgs"
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+)
+vkgs_add_header_check_target(vkgs_core_header_checks OFFSCREEN
+    ROOTS ${VKGS_HEADER_CHECK_ROOTS}
+)
+
 if(VKGS_BUILD_VIEWER)
     add_library(3dgs_viewer_lib STATIC
         ${VKGS_COMMON_SOURCES}
@@ -51,4 +59,8 @@ if(VKGS_BUILD_VIEWER)
     vkgs_configure_library(3dgs_viewer_lib ONSCREEN)
     target_compile_definitions(3dgs_viewer_lib PRIVATE VKGS_ENABLE_GLFW)
     target_link_libraries(3dgs_viewer_lib PRIVATE glfw imgui::imgui implot::implot)
+
+    vkgs_add_header_check_target(vkgs_viewer_header_checks ONSCREEN
+        ROOTS ${VKGS_HEADER_CHECK_ROOTS}
+    )
 endif()
