@@ -163,6 +163,13 @@ writes PPM files. A starting point lives at `apps/offscreen/examples/simple_rend
 `scene` field to a trained `point_cloud.ply` (see [Scenes](#scenes)); see `apps/offscreen/README.md`
 for the full config format.
 
+## Documentation
+
+Engineering documentation lives in [`docs/`](docs/README.md). It covers the project architecture,
+the Vulkan compute rendering pipeline, the math behind splat projection and compositing, shader
+pass notes under [`docs/shaders/`](docs/shaders/README.md), and future extension points for a
+training pipeline.
+
 ## Editor Tooling
 
 Presets export `compile_commands.json` and the active database is mirrored to
@@ -190,6 +197,7 @@ default build.
   CMakeLists.txt           # Root project
   CMakePresets.json        # Windows + OHOS presets
   cmake/Dependencies.cmake # Archive-pinned, hash-verified FetchContent
+  docs/                    # Architecture, rendering, math, and shader notes
   include/3dgs/            # Public PImpl API headers
   src/                     # Core renderer, scene, session, and Vulkan code
     core/                  # Shared CPU utilities
