@@ -1,5 +1,4 @@
-#ifndef VKGS_SCENE_PLY_READER_H
-#define VKGS_SCENE_PLY_READER_H
+#pragma once
 
 #include "GaussianSceneData.hpp"
 
@@ -24,5 +23,3 @@ class PlyReader {
 };
 
 } // namespace vkgs::scene
-
-#endif // VKGS_SCENE_PLY_READER_H

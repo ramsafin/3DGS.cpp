@@ -1,5 +1,4 @@
-#ifndef IMGUIMANAGER_H
-#define IMGUIMANAGER_H
+#pragma once
 
 #include "Swapchain.hpp"
 #include "VulkanContext.hpp"
@@ -41,5 +40,3 @@ class ImguiManager {
 
     void initVulkanBackend();
 };
-
-#endif // IMGUIMANAGER_H

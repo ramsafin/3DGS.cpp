@@ -1,5 +1,4 @@
-#ifndef VKGS_VULKAN_DEVICE_REQUIREMENTS_H
-#define VKGS_VULKAN_DEVICE_REQUIREMENTS_H
+#pragma once
 
 #include <cstdint>
 #include <optional>
@@ -57,5 +56,3 @@ selectQueueFamilies(std::span<const QueueFamilyCapabilities> queueFamilies, cons
 getUnsuitabilityReasons(const DeviceRequirements& requirements, const VulkanDeviceCapabilities& capabilities);
 
 } // namespace vkgs::vulkan
-
-#endif // VKGS_VULKAN_DEVICE_REQUIREMENTS_H

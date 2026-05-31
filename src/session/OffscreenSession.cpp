@@ -35,15 +35,7 @@ void OffscreenSession::render(const CameraPose& camera, std::optional<CameraProj
     if (projection.has_value()) {
         renderer.setCameraProjection(projection->horizontalFovDegrees, projection->nearPlane, projection->farPlane);
     }
-    renderer.setCameraPose(
-        camera.position[0],
-        camera.position[1],
-        camera.position[2],
-        camera.rotation[0],
-        camera.rotation[1],
-        camera.rotation[2],
-        camera.rotation[3]
-    );
+    renderer.setCameraPose(camera);
     renderer.draw();
 }
 

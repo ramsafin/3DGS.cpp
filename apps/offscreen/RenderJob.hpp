@@ -1,5 +1,4 @@
-#ifndef VKGS_OFFSCREEN_RENDER_JOB_H
-#define VKGS_OFFSCREEN_RENDER_JOB_H
+#pragma once
 
 #include <3dgs/OffscreenRenderer.hpp>
 
@@ -32,5 +31,3 @@ struct RenderJob {
 );
 
 } // namespace vkgs::offscreen
-
-#endif // VKGS_OFFSCREEN_RENDER_JOB_H

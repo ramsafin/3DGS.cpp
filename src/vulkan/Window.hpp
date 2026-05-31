@@ -1,5 +1,4 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#pragma once
 #include "VulkanContext.hpp"
 
 #include <array>
@@ -42,5 +41,3 @@ class Window {
 
     virtual ~Window() = default;
 };
-
-#endif // WINDOW_H

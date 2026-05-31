@@ -13,7 +13,7 @@
 namespace vkgs::scene {
 namespace {
 
-struct PlyVertexRecord {
+struct PlyVertexRecord final {
     std::array<float, 3> position;
     std::array<float, 3> normal;
     std::array<float, 48> shs;
@@ -45,7 +45,7 @@ SceneBounds calculateBounds(const std::vector<vkgs::render::SceneVertex>& vertic
 }
 
 vkgs::render::SceneVertex convertVertex(const PlyVertexRecord& diskVertex) {
-    vkgs::render::SceneVertex vertex{};
+    vkgs::render::SceneVertex vertex = {};
     const glm::vec3 position(diskVertex.position[0], diskVertex.position[1], diskVertex.position[2]);
     vertex.position = glm::vec4(position, 1.0f);
     vertex.scaleOpacity = glm::vec4(
@@ -114,6 +114,16 @@ PlyHeader PlyReader::validateHeaderOnly() const {
     return header;
 }
 
+namespace {
+
+enum class CurrentElement : uint8_t {
+    None,
+    Vertex,
+    Face
+};
+
+} // namespace
+
 PlyHeader PlyReader::loadHeader(std::ifstream& plyFile) const {
     if (!plyFile.is_open()) {
         throw std::runtime_error("Could not open file: " + filename.string());
@@ -123,11 +133,7 @@ PlyHeader PlyReader::loadHeader(std::ifstream& plyFile) const {
     std::string line;
     bool sawMagic = false;
     bool headerEnd = false;
-    enum class CurrentElement : uint8_t {
-        None,
-        Vertex,
-        Face
-    } current = CurrentElement::None;
+    auto current = CurrentElement::None;
 
     while (std::getline(plyFile, line)) {
         std::istringstream input(line);

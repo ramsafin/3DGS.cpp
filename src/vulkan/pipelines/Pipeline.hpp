@@ -1,5 +1,4 @@
-#ifndef VULKAN_SPLATTING_PIPELINE_H
-#define VULKAN_SPLATTING_PIPELINE_H
+#pragma once
 
 #include "vulkan/DescriptorSet.hpp"
 #include "vulkan/VulkanContext.hpp"
@@ -60,5 +59,3 @@ class Pipeline {
 
     std::map<uint32_t, std::shared_ptr<DescriptorSet>> descriptorSets;
 };
-
-#endif // VULKAN_SPLATTING_PIPELINE_H

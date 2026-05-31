@@ -30,7 +30,6 @@ add_library(3dgs_core STATIC
     ${VKGS_COMMON_SOURCES}
     api/OffscreenRenderer.cpp
     session/OffscreenSession.cpp
-    DummyGUIManager.cpp
 )
 
 add_library(3dgs::core ALIAS 3dgs_core)

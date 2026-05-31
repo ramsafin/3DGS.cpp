@@ -1,5 +1,4 @@
-#ifndef VKGS_VULKAN_BARRIER_BUILDER_H
-#define VKGS_VULKAN_BARRIER_BUILDER_H
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -45,5 +44,3 @@ class BarrierBuilder {
 };
 
 } // namespace vkgs::vulkan
-
-#endif // VKGS_VULKAN_BARRIER_BUILDER_H

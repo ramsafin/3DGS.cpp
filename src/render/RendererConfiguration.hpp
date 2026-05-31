@@ -1,5 +1,4 @@
-#ifndef VKGS_RENDER_RENDERER_CONFIGURATION_H
-#define VKGS_RENDER_RENDERER_CONFIGURATION_H
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -10,7 +9,7 @@ class Window;
 
 namespace vkgs::render {
 
-struct RendererConfiguration {
+struct RendererConfiguration final {
     bool enableVulkanValidationLayers = false;
     std::optional<uint8_t> physicalDeviceId;
     bool immediateSwapchain = false;
@@ -25,5 +24,3 @@ struct RendererConfiguration {
 };
 
 } // namespace vkgs::render
-
-#endif // VKGS_RENDER_RENDERER_CONFIGURATION_H

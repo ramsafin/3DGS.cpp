@@ -1,5 +1,4 @@
-#ifndef VKGS_SCENE_GAUSSIAN_SCENE_DATA_H
-#define VKGS_SCENE_GAUSSIAN_SCENE_DATA_H
+#pragma once
 
 #include "render/GpuTypes.hpp"
 
@@ -10,12 +9,12 @@
 
 namespace vkgs::scene {
 
-struct PlyProperty {
+struct PlyProperty final {
     std::string type;
     std::string name;
 };
 
-struct PlyHeader {
+struct PlyHeader final {
     std::string format;
     uint32_t numVertices = 0;
     uint32_t numFaces = 0;
@@ -23,17 +22,15 @@ struct PlyHeader {
     std::vector<PlyProperty> faceProperties;
 };
 
-struct SceneBounds {
+struct SceneBounds final {
     glm::vec3 center{0.0f};
     float radius = 1.0f;
 };
 
-struct GaussianSceneData {
+struct GaussianSceneData final {
     PlyHeader header;
     std::vector<vkgs::render::SceneVertex> vertices;
     SceneBounds bounds;
 };
 
 } // namespace vkgs::scene
-
-#endif // VKGS_SCENE_GAUSSIAN_SCENE_DATA_H

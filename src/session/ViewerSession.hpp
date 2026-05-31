@@ -1,5 +1,4 @@
-#ifndef VKGS_SESSION_VIEWER_SESSION_H
-#define VKGS_SESSION_VIEWER_SESSION_H
+#pragma once
 
 #include <3dgs/Viewer.hpp>
 
@@ -25,5 +24,3 @@ class ViewerSession {
 };
 
 } // namespace vkgs::session
-
-#endif // VKGS_SESSION_VIEWER_SESSION_H

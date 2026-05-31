@@ -1,5 +1,4 @@
-#ifndef VULKAN_SPLATTING_DESCRIPTORSET_H
-#define VULKAN_SPLATTING_DESCRIPTORSET_H
+#pragma once
 
 #include "RenderImageView.hpp"
 #include "VulkanContext.hpp"
@@ -54,5 +53,3 @@ class DescriptorSet : public std::enable_shared_from_this<DescriptorSet> {
     const uint8_t framesInFlight;
     std::unordered_map<uint32_t, std::vector<DescriptorBinding>> bindings;
 };
-
-#endif // VULKAN_SPLATTING_DESCRIPTORSET_H

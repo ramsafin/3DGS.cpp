@@ -1,5 +1,4 @@
-#ifndef VKGS_TYPES_H
-#define VKGS_TYPES_H
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -23,5 +22,3 @@ struct CameraProjection {
 };
 
 } // namespace vkgs
-
-#endif // VKGS_TYPES_H

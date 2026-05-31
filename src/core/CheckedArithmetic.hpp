@@ -1,5 +1,4 @@
-#ifndef VKGS_CORE_CHECKED_ARITHMETIC_H
-#define VKGS_CORE_CHECKED_ARITHMETIC_H
+#pragma once
 
 #include <cstdint>
 #include <string_view>
@@ -11,5 +10,3 @@ uint64_t checkedMultiply(uint64_t left, uint64_t right, std::string_view context
 uint32_t checkedNarrowToUint32(uint64_t value, std::string_view context);
 
 } // namespace vkgs::core
-
-#endif // VKGS_CORE_CHECKED_ARITHMETIC_H

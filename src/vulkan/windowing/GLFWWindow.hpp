@@ -1,5 +1,4 @@
-#ifndef GLFWWINDOW_H
-#define GLFWWINDOW_H
+#pragma once
 
 #include "vulkan/Window.hpp"
 
@@ -43,5 +42,3 @@ class GLFWWindow final : public Window {
 
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 };
-
-#endif // GLFWWINDOW_H

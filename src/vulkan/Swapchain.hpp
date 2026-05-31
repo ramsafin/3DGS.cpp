@@ -1,5 +1,4 @@
-#ifndef VULKAN_SPLATTING_SWAPCHAIN_H
-#define VULKAN_SPLATTING_SWAPCHAIN_H
+#pragma once
 
 #include "RenderImageView.hpp"
 #include "VulkanContext.hpp"
@@ -33,5 +32,3 @@ class Swapchain {
 
     void createSwapchainImages();
 };
-
-#endif // VULKAN_SPLATTING_SWAPCHAIN_H

@@ -1,5 +1,4 @@
-#ifndef CAMERACONTROLLER_H
-#define CAMERACONTROLLER_H
+#pragma once
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -24,12 +23,10 @@ class CameraController {
 
   private:
     bool hasResetSnapshot = false;
-    glm::vec3 resetPosition{};
-    glm::quat resetRotation{};
-    glm::vec3 resetFocus{};
+    glm::vec3 resetPosition = {0.0f, 0.0f, 0.0f};
+    glm::quat resetRotation = {1.0f, 0.0f, 0.0f, 0.0f};
+    glm::vec3 resetFocus = {0.0f, 0.0f, 0.0f};
     float resetOrbitDistance = 1.0f;
 
     void saveResetSnapshot();
 };
-
-#endif // CAMERACONTROLLER_H

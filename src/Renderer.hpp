@@ -1,12 +1,14 @@
-#ifndef RENDERER_H
-#define RENDERER_H
+#pragma once
 
 #define GLM_FORCE_SWIZZLE
 
 #include "CameraController.hpp"
 #include "GpuConstants.hpp"
 #include "render/RendererConfiguration.hpp"
+
 #include "scene/GpuScene.hpp"
+#include <3dgs/Types.hpp> // CameraPose
+
 #include "vulkan/Window.hpp"
 #include "vulkan/pipelines/ComputePipeline.hpp"
 
@@ -19,19 +21,19 @@
 #include <vector>
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
+#include "GUIManager.hpp"
 #include "vulkan/ImguiManager.hpp"
 #include "vulkan/Swapchain.hpp"
 #else
 #include "vulkan/OffscreenRenderTarget.hpp"
 #endif
-#include "GUIManager.hpp"
 #include "vulkan/QueryManager.hpp"
 
 #include <glm/gtc/quaternion.hpp>
 
 class Renderer {
   public:
-    struct Camera {
+    struct Camera final {
         CameraController controller;
         float fov = 45.0f;
         float nearPlane = 0.1f;
@@ -54,15 +56,7 @@ class Renderer {
 
     std::vector<uint8_t> readPixels() const;
 
-    void setCameraPose(
-        float positionX,
-        float positionY,
-        float positionZ,
-        float rotationW,
-        float rotationX,
-        float rotationY,
-        float rotationZ
-    );
+    void setCameraPose(const vkgs::CameraPose& pose);
 
     void setCameraProjection(float fovDegrees, float nearPlane, float farPlane);
 
@@ -80,10 +74,10 @@ class Renderer {
     std::shared_ptr<VulkanContext> context;
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     std::shared_ptr<ImguiManager> imguiManager;
+    GUIManager guiManager;
 #endif
     std::unique_ptr<vkgs::scene::GpuScene> scene;
     QueryManager queryManager;
-    GUIManager guiManager{};
 
     std::shared_ptr<ComputePipeline> preprocessPipeline;
     std::shared_ptr<ComputePipeline> renderPipeline;
@@ -114,6 +108,7 @@ class Renderer {
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     std::shared_ptr<Swapchain> swapchain;
+    std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
 #else
     std::shared_ptr<OffscreenRenderTarget> offscreenRenderTarget;
 #endif
@@ -124,19 +119,12 @@ class Renderer {
     vk::UniqueCommandBuffer renderCommandBuffer;
 
     uint32_t currentImageIndex = 0;
-
-#ifdef VKGS_RENDER_MODE_ONSCREEN
-    std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;
-#endif
-
     uint32_t numRadixSortBlocksPerWorkgroup = gpu::RadixBlocksPerWorkgroup;
 
     int fpsCounter = 0;
     std::chrono::high_resolution_clock::time_point lastFpsTime = std::chrono::high_resolution_clock::now();
 
     uint32_t sortBufferSizeMultiplier = 1;
-
-    bool framesRotated180 = false;
 
     void initializeVulkan();
 
@@ -162,21 +150,14 @@ class Renderer {
 
     void updateUniforms();
 
-    void toggleFrameRotation180();
-
     void processGuiCameraRequests();
 
     void resetTimestampQueries(vk::CommandBuffer commandBuffer);
-
     void writeTimestamp(vk::CommandBuffer commandBuffer, const std::string& name);
 
     static void validateCameraProjection(float fovDegrees, float nearPlane, float farPlane);
 
     vk::Extent2D getRenderExtent() const;
-
     std::span<const vkgs::vulkan::RenderImageView> getRenderImages() const;
-
     const vkgs::vulkan::RenderImageView& getCurrentRenderImage() const;
 };
-
-#endif // RENDERER_H

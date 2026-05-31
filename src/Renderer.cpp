@@ -99,20 +99,8 @@ void Renderer::handleInput() {
 #endif
 }
 
-void Renderer::toggleFrameRotation180() {
-    const auto roll180 = glm::angleAxis(glm::pi<float>(), glm::vec3(0.0f, 0.0f, -1.0f));
-    camera.controller.rotation = glm::normalize(camera.controller.rotation * roll180);
-    camera.controller.syncFocusFromPose();
-    framesRotated180 = !framesRotated180;
-    guiManager.viewRotated180 = framesRotated180;
-}
-
 void Renderer::processGuiCameraRequests() {
 #ifdef VKGS_RENDER_MODE_ONSCREEN
-    if (guiManager.frameRotationToggleRequested) {
-        guiManager.frameRotationToggleRequested = false;
-        toggleFrameRotation180();
-    }
     if (guiManager.frameSceneRequested) {
         guiManager.frameSceneRequested = false;
         if (scene != nullptr) {
@@ -146,16 +134,18 @@ void Renderer::retrieveTimestamps() {
         throw std::runtime_error("Failed to retrieve timestamps");
     }
 
-    auto metrics = queryManager.parseResults(timestamps);
-    for (auto& metric : metrics) {
-        if (configuration.enableGui) {
-            const auto timestampPeriod = context->physicalDevice.getProperties().limits.timestampPeriod;
+#ifdef VKGS_RENDER_MODE_ONSCREEN
+    if (configuration.enableGui) {
+        auto metrics = queryManager.parseResults(timestamps);
+        const auto timestampPeriod = context->physicalDevice.getProperties().limits.timestampPeriod;
+        for (auto& metric : metrics) {
             guiManager.pushMetric(
                 metric.first,
                 static_cast<float>(timestampTicksToMilliseconds(metric.second, timestampPeriod))
             );
         }
     }
+#endif
 }
 
 void Renderer::resetTimestampQueries(vk::CommandBuffer commandBuffer) {
@@ -342,18 +332,10 @@ Renderer::Renderer(vkgs::render::RendererConfiguration configuration)
     camera.farPlane = this->configuration.farPlane;
 }
 
-void Renderer::setCameraPose(
-    float positionX,
-    float positionY,
-    float positionZ,
-    float rotationW,
-    float rotationX,
-    float rotationY,
-    float rotationZ
-) {
+void Renderer::setCameraPose(const vkgs::CameraPose& pose) {
     camera.controller.setPose(
-        glm::vec3(positionX, positionY, positionZ),
-        glm::quat(rotationW, rotationX, rotationY, rotationZ)
+        glm::vec3(pose.position[0], pose.position[1], pose.position[2]),
+        glm::quat(pose.rotation[0], pose.rotation[1], pose.rotation[2], pose.rotation[3])
     );
 }
 
@@ -968,7 +950,11 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     }
 
     const uint32_t numInstances = totalSumBufferHost->readOne<uint32_t>();
-    guiManager.pushTextMetric("instances", static_cast<float>(numInstances));
+#ifdef VKGS_RENDER_MODE_ONSCREEN
+    if (configuration.enableGui) {
+        guiManager.pushTextMetric("instances", static_cast<float>(numInstances));
+    }
+#endif
     auto capacity = sizing::sortCapacity(scene->getNumVertices(), sortBufferSizeMultiplier);
     if (numInstances > capacity) {
         const auto old = sortBufferSizeMultiplier;

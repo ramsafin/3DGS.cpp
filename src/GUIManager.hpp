@@ -1,12 +1,9 @@
-#ifndef GUIMANAGER_H
-#define GUIMANAGER_H
+#pragma once
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 class GUIManager {
   public:
@@ -28,13 +25,9 @@ class GUIManager {
 
     static bool wantCaptureKeyboard();
 
-    bool frameRotationToggleRequested = false;
     bool frameSceneRequested = false;
     bool resetCameraRequested = false;
-    bool viewRotated180 = false;
 
     glm::vec3 cameraPosition{0.0f};
     glm::quat cameraRotation{1.0f, 0.0f, 0.0f, 0.0f};
 };
-
-#endif // GUIMANAGER_H

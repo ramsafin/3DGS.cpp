@@ -5,6 +5,7 @@
 #include <utility>
 
 namespace vkgs {
+
 class OffscreenRenderer::Impl {
   public:
     explicit Impl(OffscreenConfig configuration)

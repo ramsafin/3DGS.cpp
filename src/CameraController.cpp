@@ -2,14 +2,16 @@
 
 #include <algorithm>
 #include <cmath>
-#include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 #include <stdexcept>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace {
-constexpr float kMinOrbitDistance = 1e-4f;
+constexpr auto MIN_ORBIT_DISTANCE = 1e-4f;
 
 glm::vec3 worldUp() {
-    return glm::vec3(0.0f, 1.0f, 0.0f);
+    return {0.0f, 1.0f, 0.0f};
 }
 
 bool isFinite(glm::vec3 value) {
@@ -23,7 +25,7 @@ bool isFinite(glm::quat value) {
 
 void CameraController::syncRotationToFocus() {
     const glm::vec3 toFocus = focus - position;
-    if (glm::length(toFocus) < kMinOrbitDistance) {
+    if (glm::length(toFocus) < MIN_ORBIT_DISTANCE) {
         return;
     }
 
@@ -43,8 +45,8 @@ void CameraController::syncFocusFromPose() {
 
 void CameraController::orbit(float dx, float dy, float sensitivity) {
     glm::vec3 offset = position - focus;
-    const float radius = std::max(glm::length(offset), kMinOrbitDistance);
-    if (glm::length(offset) < kMinOrbitDistance) {
+    const float radius = std::max(glm::length(offset), MIN_ORBIT_DISTANCE);
+    if (glm::length(offset) < MIN_ORBIT_DISTANCE) {
         offset = glm::vec3(0.0f, 0.0f, radius);
     }
 
@@ -54,7 +56,7 @@ void CameraController::orbit(float dx, float dy, float sensitivity) {
     offset = glm::vec3(glm::rotate(glm::mat4(1.0f), yaw, worldUp()) * glm::vec4(offset, 1.0f));
 
     glm::vec3 right = glm::cross(worldUp(), offset);
-    if (glm::length(right) < kMinOrbitDistance) {
+    if (glm::length(right) < MIN_ORBIT_DISTANCE) {
         right = glm::vec3(1.0f, 0.0f, 0.0f);
     } else {
         right = glm::normalize(right);
@@ -76,23 +78,23 @@ void CameraController::pan(float dx, float dy, float sensitivity) {
 }
 
 void CameraController::dolly(float scrollDelta, float sensitivity) {
-    if (scrollDelta == 0.0f) {
+    if (std::abs(scrollDelta) < std::numeric_limits<float>::epsilon()) {
         return;
     }
 
     const glm::vec3 toFocus = focus - position;
-    if (glm::length(toFocus) < kMinOrbitDistance) {
+    if (glm::length(toFocus) < MIN_ORBIT_DISTANCE) {
         return;
     }
 
     const float scale = orbitDistance * sensitivity;
     const glm::vec3 forward = glm::normalize(toFocus);
     position += forward * (scrollDelta * scale);
-    orbitDistance = std::max(glm::length(focus - position), kMinOrbitDistance);
+    orbitDistance = std::max(glm::length(focus - position), MIN_ORBIT_DISTANCE);
 }
 
 void CameraController::fly(glm::vec3 localDirection, float speed) {
-    if (glm::length(localDirection) < kMinOrbitDistance) {
+    if (glm::length(localDirection) < MIN_ORBIT_DISTANCE) {
         return;
     }
 
@@ -120,7 +122,7 @@ void CameraController::frameScene(glm::vec3 center, float radius, float fovDeg) 
 void CameraController::setPose(glm::vec3 newPosition, glm::quat newRotation) {
     const float squaredLength = glm::dot(newRotation, newRotation);
     if (!isFinite(newPosition) || !isFinite(newRotation) || !std::isfinite(squaredLength) ||
-        squaredLength < kMinOrbitDistance * kMinOrbitDistance) {
+        squaredLength < MIN_ORBIT_DISTANCE * MIN_ORBIT_DISTANCE) {
         throw std::runtime_error("Camera pose must contain a finite position and a non-zero finite quaternion");
     }
 

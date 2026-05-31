@@ -1,5 +1,4 @@
-#ifndef VULKAN_SPLATTING_BUFFER_H
-#define VULKAN_SPLATTING_BUFFER_H
+#pragma once
 
 #include "VulkanContext.hpp"
 #include "vk_mem_alloc.h"
@@ -157,5 +156,3 @@ class Buffer : public std::enable_shared_from_this<Buffer> {
     std::vector<std::tuple<std::weak_ptr<DescriptorSet>, uint32_t, uint32_t, vk::DescriptorType>> boundDescriptorSets;
     std::string debugName;
 };
-
-#endif // VULKAN_SPLATTING_BUFFER_H

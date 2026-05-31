@@ -1,5 +1,4 @@
-#ifndef VKGS_SCENE_GPU_SCENE_H
-#define VKGS_SCENE_GPU_SCENE_H
+#pragma once
 
 #include "GaussianSceneData.hpp"
 #include "vulkan/Buffer.hpp"
@@ -30,5 +29,3 @@ class GpuScene {
 };
 
 } // namespace vkgs::scene
-
-#endif // VKGS_SCENE_GPU_SCENE_H

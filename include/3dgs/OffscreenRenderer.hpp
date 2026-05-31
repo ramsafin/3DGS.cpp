@@ -1,5 +1,4 @@
-#ifndef VKGS_OFFSCREEN_RENDERER_H
-#define VKGS_OFFSCREEN_RENDERER_H
+#pragma once
 
 #include "Types.hpp"
 
@@ -38,5 +37,3 @@ class OffscreenRenderer {
 };
 
 } // namespace vkgs
-
-#endif // VKGS_OFFSCREEN_RENDERER_H

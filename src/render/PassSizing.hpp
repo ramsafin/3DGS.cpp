@@ -1,5 +1,4 @@
-#ifndef VKGS_RENDER_PASS_SIZING_H
-#define VKGS_RENDER_PASS_SIZING_H
+#pragma once
 
 #include <cstdint>
 #include <string_view>
@@ -18,5 +17,3 @@ uint64_t sortHistogramBytes(uint32_t workgroupCount);
 uint64_t tileBoundaryBytes(uint32_t width, uint32_t height);
 
 } // namespace vkgs::render
-
-#endif // VKGS_RENDER_PASS_SIZING_H

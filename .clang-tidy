@@ -30,7 +30,8 @@ Checks: >
   readability-redundant-*,
   -readability-magic-numbers,
   -google-readability-todo,
-  -modernize-use-trailing-return-type
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-pro-type-vararg
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '(include|src|tests|apps)/.*'
@@ -44,8 +45,8 @@ CheckOptions:
   - key: readability-identifier-length.MinimumLoopCounterNameLength
     value: 1
   - key: readability-identifier-length.IgnoredVariableNames
-    value: 'x;y;z;t;px;py;pz;qw;qx;qy;qz'
+    value: '^(x|y|z|t|px|py|pz|qw|qx|qy|qz|up)$'
   - key: readability-identifier-length.IgnoredParameterNames
-    value: 'x;y;z;t;i;j;k;px;py;pz;qw;qx;qy;qz'
+    value: '^(x|y|z|t|i|j|k|dx|dy|px|py|pz|qw|qx|qy|qz|up)$'
   - key: readability-identifier-length.IgnoredLoopCounterNames
-    value: 'i;j;k'
+    value: '^[ijk_]$'

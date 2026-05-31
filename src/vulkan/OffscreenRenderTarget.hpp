@@ -1,5 +1,4 @@
-#ifndef OFFSCREEN_RENDER_TARGET_H
-#define OFFSCREEN_RENDER_TARGET_H
+#pragma once
 
 #include "RenderImageView.hpp"
 #include "VulkanContext.hpp"
@@ -33,5 +32,3 @@ class OffscreenRenderTarget {
     vk::UniqueImageView imageView;
     VmaAllocation allocation = nullptr;
 };
-
-#endif // OFFSCREEN_RENDER_TARGET_H

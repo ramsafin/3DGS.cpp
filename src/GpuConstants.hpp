@@ -1,11 +1,10 @@
-#ifndef VKGS_GPU_CONSTANTS_H
-#define VKGS_GPU_CONSTANTS_H
+#pragma once
 
-#include <cstdint>
+#include <cstdint> // uint32_t
 
 // Pull in the shared #define constants that GLSL shaders also consume, then
 // expose them as typed constexpr values and undefine the macros so they do not
-// leak into the rest of the C++ translation unit (VKGS-014).
+// leak into the rest of the C++ translation unit.
 #include "shaders/shared_constants.glsl"
 
 namespace gpu {
@@ -27,5 +26,3 @@ static_assert(ShCoeffVectors * 3 == ShMaxCoeffs, "SH coefficient vector count mu
 #undef VKGS_SH_MAX_COEFFS
 #undef VKGS_RADIX_SORT_BINS
 #undef VKGS_RADIX_BLOCKS_PER_WORKGROUP
-
-#endif // VKGS_GPU_CONSTANTS_H

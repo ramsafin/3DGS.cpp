@@ -1,5 +1,4 @@
-#ifndef SHADER_H
-#define SHADER_H
+#pragma once
 #include "VulkanContext.hpp"
 
 #include <cstddef>
@@ -43,5 +42,3 @@ class Shader {
     const unsigned char* data = nullptr;
     size_t size = 0;
 };
-
-#endif // SHADER_H

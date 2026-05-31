@@ -1,27 +1,27 @@
-#ifndef VKGS_RENDER_GPU_TYPES_H
-#define VKGS_RENDER_GPU_TYPES_H
+#pragma once
 
 #include "GpuConstants.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+
 #include <glm/glm.hpp>
 
 namespace vkgs::render {
 
-struct SceneVertex {
+struct SceneVertex final {
     glm::vec4 position;
     glm::vec4 scaleOpacity;
     glm::vec4 rotation;
     std::array<float, gpu::ShMaxCoeffs> shs;
 };
 
-struct Cov3DUpperRight {
+struct Cov3DUpperRight final {
     std::array<float, 6> values;
 };
 
-struct alignas(16) UniformBuffer {
+struct alignas(16) UniformBuffer final {
     glm::vec4 cameraPosition;
     glm::mat4 projection;
     glm::mat4 view;
@@ -32,7 +32,7 @@ struct alignas(16) UniformBuffer {
     float nearPlane;
 };
 
-struct VertexAttribute {
+struct VertexAttribute final {
     glm::vec4 conicOpacity;
     glm::vec4 colorRadii;
     glm::uvec4 aabb;
@@ -41,7 +41,7 @@ struct VertexAttribute {
     uint32_t magic;
 };
 
-struct RadixSortPushConstants {
+struct RadixSortPushConstants final {
     uint32_t numElements;
     uint32_t shift;
     uint32_t numWorkgroups;
@@ -77,5 +77,3 @@ static_assert(offsetof(VertexAttribute, magic) == 60, "VertexAttribute::magic of
 static_assert(sizeof(RadixSortPushConstants) == 16, "RadixSortPushConstants must match the GLSL push constants");
 
 } // namespace vkgs::render
-
-#endif // VKGS_RENDER_GPU_TYPES_H

@@ -3,18 +3,21 @@
 #include "imgui.h"
 #include "implot/implot.h"
 
-#include <iostream>
+struct ScrollingBuffer final {
+    static constexpr int DEFAULT_MAX_SIZE = 10'000;
 
-struct ScrollingBuffer {
-    int maxSize;
-    int offset;
+    int maxSize = 0;
+    int offset = 0;
     ImVector<ImVec2> data;
-    explicit ScrollingBuffer(const int max_size = 10000) {
+
+    explicit ScrollingBuffer(int max_size = DEFAULT_MAX_SIZE) {
         maxSize = max_size;
         offset = 0;
         data.reserve(maxSize);
     }
+
     void addPoint(float x, float y) {
+        // circular buffer
         if (data.size() < maxSize)
             data.push_back(ImVec2(x, y));
         else {
@@ -22,6 +25,7 @@ struct ScrollingBuffer {
             offset = (offset + 1) % maxSize;
         }
     }
+
     void clear() {
         if (data.size() > 0) {
             data.shrink(0);
@@ -32,6 +36,7 @@ struct ScrollingBuffer {
 
 static std::shared_ptr<std::unordered_map<std::string, ScrollingBuffer>> metricsMap;
 static std::shared_ptr<std::unordered_map<std::string, float>> textMetricsMap;
+static constexpr auto DEFAULT_HISTORY_SECONDS = 10.0f;
 
 GUIManager::GUIManager() {
     metricsMap = std::make_shared<std::unordered_map<std::string, ScrollingBuffer>>();
@@ -53,9 +58,9 @@ void GUIManager::buildGui() {
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::Begin("Performance");
 
-    static float history = 10;
-
+    static float history = DEFAULT_HISTORY_SECONDS;
     static ImPlotAxisFlags flags = ImPlotAxisFlags_AutoFit;
+
     if (ImPlot::BeginPlot("##Scrolling", ImVec2(-1, -1))) {
         ImPlot::SetupAxes("s", "time (ms)", flags, flags);
         const auto t = ImGui::GetTime();
@@ -101,8 +106,6 @@ void GUIManager::buildGui() {
     ImGui::Text("Shift: down");
     ImGui::Text("F: frame scene");
     ImGui::Text("R: reset camera");
-    ImGui::Text("U: rotate view 180 degrees");
-    ImGui::Text("View rotated 180: %s", viewRotated180 ? "true" : "false");
     ImGui::Separator();
     ImGui::Text("Position: %.3f, %.3f, %.3f", cameraPosition.x, cameraPosition.y, cameraPosition.z);
     ImGui::Text(
@@ -115,9 +118,6 @@ void GUIManager::buildGui() {
     ImGui::End();
 
     if (!wantCaptureKeyboard()) {
-        if (ImGui::IsKeyPressed(ImGuiKey_U, false)) {
-            frameRotationToggleRequested = true;
-        }
         if (ImGui::IsKeyPressed(ImGuiKey_F, false)) {
             frameSceneRequested = true;
         }
@@ -140,12 +140,12 @@ void GUIManager::pushMetric(const std::string& name, float value) {
     if (!metricsMap->contains(name)) {
         metricsMap->insert({name, ScrollingBuffer{}});
     }
-    metricsMap->at(name).addPoint(ImGui::GetTime(), value);
+    metricsMap->at(name).addPoint(static_cast<float>(ImGui::GetTime()), value);
 }
 
 void GUIManager::pushMetric(const std::unordered_map<std::string, float>& name) {
-    for (auto& [n, v] : name) {
-        pushMetric(n, v);
+    for (auto& [metric_name, metric_value] : name) {
+        pushMetric(metric_name, metric_value);
     }
 }
 

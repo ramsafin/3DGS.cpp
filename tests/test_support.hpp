@@ -1,5 +1,4 @@
-#ifndef VKGS_TEST_SUPPORT_H
-#define VKGS_TEST_SUPPORT_H
+#pragma once
 
 #include "vulkan/VulkanContext.hpp"
 
@@ -90,5 +89,3 @@ inline uint64_t fnv1a(const std::vector<uint8_t>& data) {
 }
 
 } // namespace vkgs_test
-
-#endif // VKGS_TEST_SUPPORT_H

@@ -1,12 +1,14 @@
 #include <3dgs/Viewer.hpp>
 
 #include "session/ViewerSession.hpp"
+
 #include "vulkan/Window.hpp"
 #include "vulkan/windowing/GLFWWindow.hpp"
 
 #include <utility>
 
 namespace vkgs::viewer {
+
 class WindowAdapter::Impl {
   public:
     explicit Impl(std::shared_ptr<Window> window)
@@ -19,6 +21,7 @@ class WindowAdapter::Impl {
 WindowAdapter::WindowAdapter(std::unique_ptr<Impl> impl)
     : impl(std::move(impl)) {
 }
+
 WindowAdapter::~WindowAdapter() = default;
 WindowAdapter::WindowAdapter(WindowAdapter&&) noexcept = default;
 WindowAdapter& WindowAdapter::operator=(WindowAdapter&&) noexcept = default;

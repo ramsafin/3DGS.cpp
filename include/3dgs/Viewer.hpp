@@ -1,5 +1,4 @@
-#ifndef VKGS_VIEWER_H
-#define VKGS_VIEWER_H
+#pragma once
 
 #include "Types.hpp"
 
@@ -68,5 +67,3 @@ class Viewer {
 };
 
 } // namespace vkgs::viewer
-
-#endif // VKGS_VIEWER_H

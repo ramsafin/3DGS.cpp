@@ -1,5 +1,4 @@
-#ifndef VKGS_VULKAN_RENDER_IMAGE_VIEW_H
-#define VKGS_VULKAN_RENDER_IMAGE_VIEW_H
+#pragma once
 
 #include <vulkan/vulkan.hpp>
 
@@ -13,5 +12,3 @@ struct RenderImageView {
 };
 
 } // namespace vkgs::vulkan
-
-#endif // VKGS_VULKAN_RENDER_IMAGE_VIEW_H

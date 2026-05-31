@@ -1,5 +1,4 @@
-#ifndef VULKANCONTEXT_H
-#define VULKANCONTEXT_H
+#pragma once
 
 #include "DeviceRequirements.hpp"
 #include "vk_mem_alloc.h"
@@ -128,5 +127,3 @@ class VulkanContext {
 
     vk::CommandPool getOneTimePool(uint32_t queueFamily);
 };
-
-#endif // VULKANCONTEXT_H

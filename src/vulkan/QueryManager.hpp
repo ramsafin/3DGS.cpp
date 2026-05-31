@@ -1,5 +1,4 @@
-#ifndef QUERYMANAGER_H
-#define QUERYMANAGER_H
+#pragma once
 #include <chrono>
 #include <cstdint>
 #include <mutex>
@@ -29,5 +28,3 @@ class QueryManager {
     std::unordered_map<std::string, std::vector<uint64_t>> results;
     std::chrono::time_point<std::chrono::high_resolution_clock> lastPrint;
 };
-
-#endif // QUERYMANAGER_H

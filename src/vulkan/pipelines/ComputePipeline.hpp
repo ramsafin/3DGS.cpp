@@ -1,5 +1,4 @@
-#ifndef VULKAN_SPLATTING_COMPUTEPIPELINE_H
-#define VULKAN_SPLATTING_COMPUTEPIPELINE_H
+#pragma once
 
 #include "Pipeline.hpp"
 #include "vulkan/Shader.hpp"
@@ -16,5 +15,3 @@ class ComputePipeline : public Pipeline {
   private:
     std::shared_ptr<Shader> shader;
 };
-
-#endif // VULKAN_SPLATTING_COMPUTEPIPELINE_H
