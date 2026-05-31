@@ -25,12 +25,14 @@ void writeJson(const fs::path& path, const json& value) {
 }
 
 json validConfig() {
-    return {{"scene", (fs::path(VKGS_FIXTURE_DIR) / "valid_tiny.ply").string()},
-            {"frames",
-             {{{"name", "front"},
-               {"position", {1.0f, 2.0f, 3.0f}},
-               {"rotation_quat", {1.0f, 0.0f, 0.0f, 0.0f}},
-               {"fov_degrees", 60.0f}}}}};
+    return {
+        {"scene", (fs::path(VKGS_FIXTURE_DIR) / "valid_tiny.ply").string()},
+        {"frames",
+         {{{"name", "front"},
+           {"position", {1.0f, 2.0f, 3.0f}},
+           {"rotation_quat", {1.0f, 0.0f, 0.0f, 0.0f}},
+           {"fov_degrees", 60.0f}}}}
+    };
 }
 
 } // namespace
@@ -69,6 +71,8 @@ TEST(PpmWriter, WritesRgbBytesFromRgbaInput) {
 }
 
 TEST(PpmWriter, RejectsWrongBufferSize) {
-    EXPECT_THROW(vkgs::offscreen::writePpm(golden("bad.ppm"), std::vector<uint8_t>{1, 2, 3}, {1, 1}),
-                 std::runtime_error);
+    EXPECT_THROW(
+        vkgs::offscreen::writePpm(golden("bad.ppm"), std::vector<uint8_t>{1, 2, 3}, {1, 1}),
+        std::runtime_error
+    );
 }

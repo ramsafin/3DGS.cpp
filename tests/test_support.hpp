@@ -3,6 +3,7 @@
 
 #include "vulkan/VulkanContext.hpp"
 
+#include <array>
 #include <cstdint>
 #include <fstream>
 #include <memory>
@@ -27,8 +28,7 @@ inline std::shared_ptr<VulkanContext> makeHeadlessContext() {
         vk::PhysicalDeviceVulkan12Features pdf12{};
         pdf.shaderStorageImageWriteWithoutFormat = VK_TRUE;
         pdf.shaderInt64 = VK_TRUE;
-        pdf12.shaderSharedInt64Atomics =
-            context->getRadixSortMode() == VulkanContext::RadixSortMode::FastSubgroup32;
+        pdf12.shaderSharedInt64Atomics = context->getRadixSortMode() == VulkanContext::RadixSortMode::FastSubgroup32;
 
         context->createLogicalDevice(pdf, pdf11, pdf12);
         context->createDescriptorPool(1);
@@ -40,14 +40,15 @@ inline std::shared_ptr<VulkanContext> makeHeadlessContext() {
 
 // Explicit binary vertex layout consumed by PlyReader (62 floats per vertex).
 struct PlyVertexRecord {
-    float position[3];
-    float normal[3];
-    float shs[48];
+    std::array<float, 3> position;
+    std::array<float, 3> normal;
+    std::array<float, 48> shs;
     float opacity;
-    float scale[3];
-    float rotation[4];
+    std::array<float, 3> scale;
+    std::array<float, 4> rotation;
 };
 static_assert(sizeof(PlyVertexRecord) == 62 * sizeof(float), "PLY record layout mismatch");
+static_assert(alignof(PlyVertexRecord) == alignof(float), "PLY record alignment mismatch");
 
 inline std::string binaryPlyHeader(uint64_t numVertices, const std::string& format = "binary_little_endian") {
     std::ostringstream out;
@@ -72,8 +73,10 @@ inline std::string binaryPlyHeader(uint64_t numVertices, const std::string& form
 inline void writeBinaryPly(const std::string& path, const std::vector<PlyVertexRecord>& vertices) {
     std::ofstream out(path, std::ios::binary);
     out << binaryPlyHeader(vertices.size());
-    out.write(reinterpret_cast<const char*>(vertices.data()),
-              static_cast<std::streamsize>(vertices.size() * sizeof(PlyVertexRecord)));
+    out.write(
+        reinterpret_cast<const char*>(vertices.data()),
+        static_cast<std::streamsize>(vertices.size() * sizeof(PlyVertexRecord))
+    );
 }
 
 // FNV-1a 64-bit hash for deterministic image regression comparisons.

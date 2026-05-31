@@ -96,8 +96,7 @@ TEST_F(BufferTest, OverflowingRangeIsRejected) {
     auto buffer = Buffer::storage(context, sizeof(uint32_t));
     const uint32_t value = 1u;
 
-    EXPECT_THROW(buffer->uploadObject(value, std::numeric_limits<vk::DeviceSize>::max()),
-                 std::runtime_error);
+    EXPECT_THROW(buffer->uploadObject(value, std::numeric_limits<vk::DeviceSize>::max()), std::runtime_error);
 }
 
 TEST_F(BufferTest, ReallocPreservesUsability) {
@@ -126,8 +125,8 @@ TEST_F(BufferTest, FailedReallocPreservesUsability) {
 TEST_F(BufferTest, ReallocRefreshesBuiltDescriptor) {
     auto buffer = Buffer::storage(context, sizeof(uint32_t));
     auto descriptorSet = std::make_shared<DescriptorSet>(context, 1);
-    descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute,
-                                             buffer);
+    descriptorSet
+        ->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer, vk::ShaderStageFlagBits::eCompute, buffer);
     descriptorSet->build();
 
     EXPECT_NO_THROW(buffer->realloc(2 * sizeof(uint32_t)));

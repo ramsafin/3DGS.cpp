@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
-#include <stdexcept>
 #include <glm/gtc/matrix_transform.hpp>
+#include <stdexcept>
 
 namespace {
 constexpr float kMinOrbitDistance = 1e-4f;

@@ -9,6 +9,7 @@ function(vkgs_add_viewer_ui_libraries)
         ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
     )
     add_library(imgui::imgui ALIAS imgui)
+    vkgs_require_msvc_ninja_environment(imgui)
     target_include_directories(imgui SYSTEM PUBLIC
         ${imgui_SOURCE_DIR}
         ${imgui_SOURCE_DIR}/backends
@@ -21,8 +22,15 @@ function(vkgs_add_viewer_ui_libraries)
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/implot/implot_items.cpp
     )
     add_library(implot::implot ALIAS implot)
+    vkgs_require_msvc_ninja_environment(implot)
     target_include_directories(implot SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
     target_link_libraries(implot PUBLIC imgui::imgui)
+endfunction()
+
+function(vkgs_configure_executable target)
+    target_compile_features(${target} PRIVATE cxx_std_20)
+    target_link_libraries(${target} PRIVATE vkgs_project_options vkgs_project_warnings)
+    vkgs_require_msvc_ninja_environment(${target})
 endfunction()
 
 function(vkgs_configure_library target mode)
@@ -34,10 +42,6 @@ function(vkgs_configure_library target mode)
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}
             ${CMAKE_CURRENT_SOURCE_DIR}/third_party
-            ${glm_SOURCE_DIR}
-            ${spdlog_SOURCE_DIR}/include
-            ${vulkan_headers_SOURCE_DIR}/include
-            ${VKGS_SHADER_GENERATED_DIR}
     )
     target_compile_definitions(${target}
         PRIVATE
@@ -47,8 +51,18 @@ function(vkgs_configure_library target mode)
             $<$<CONFIG:Debug>:DEBUG>
             $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
     )
-    target_link_libraries(${target} PRIVATE Vulkan::Vulkan)
+    target_link_libraries(${target}
+        PRIVATE
+            "$<BUILD_INTERFACE:vkgs_project_options>"
+            "$<BUILD_INTERFACE:vkgs_project_warnings>"
+            "$<BUILD_INTERFACE:vkgs_vulkan_headers>"
+            Vulkan::Vulkan
+            "$<BUILD_INTERFACE:glm::glm>"
+            "$<BUILD_INTERFACE:spdlog::spdlog_header_only>"
+            "$<BUILD_INTERFACE:vkgs_generated_shaders>"
+    )
     add_dependencies(${target} vkgs_shaders)
+    vkgs_require_msvc_ninja_environment(${target})
     if(CMAKE_DL_LIBS)
         target_link_libraries(${target} PRIVATE ${CMAKE_DL_LIBS})
     endif()
@@ -98,10 +112,6 @@ function(vkgs_add_header_check_target target mode)
         ${PROJECT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party
-        ${glm_SOURCE_DIR}
-        ${spdlog_SOURCE_DIR}/include
-        ${vulkan_headers_SOURCE_DIR}/include
-        ${VKGS_SHADER_GENERATED_DIR}
     )
     target_compile_definitions(${target} PRIVATE
         VULKAN_HPP_TYPESAFE_CONVERSION=1
@@ -111,6 +121,8 @@ function(vkgs_add_header_check_target target mode)
         $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
     )
     target_link_libraries(${target} PRIVATE
+        vkgs_project_options
+        vkgs_project_warnings
         vkgs_vulkan_headers
         Vulkan::Vulkan
         glm::glm
@@ -118,4 +130,5 @@ function(vkgs_add_header_check_target target mode)
         vkgs_generated_shaders
     )
     add_dependencies(${target} vkgs_shaders)
+    vkgs_require_msvc_ninja_environment(${target})
 endfunction()

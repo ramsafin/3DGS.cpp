@@ -49,36 +49,70 @@ Buffer::Allocation Buffer::allocate(vk::DeviceSize allocationSize) const {
 
     VkResult res;
     if (alignment != 0) {
-        res = vmaCreateBufferWithAlignment(context->allocator, &vkBufferInfo, &allocInfo, alignment, &vkBuffer,
-                                           &result.allocation, &result.info);
+        res = vmaCreateBufferWithAlignment(
+            context->allocator,
+            &vkBufferInfo,
+            &allocInfo,
+            alignment,
+            &vkBuffer,
+            &result.allocation,
+            &result.info
+        );
     } else {
-        res = vmaCreateBuffer(context->allocator, &vkBufferInfo, &allocInfo, &vkBuffer, &result.allocation, &result.info);
+        res =
+            vmaCreateBuffer(context->allocator, &vkBufferInfo, &allocInfo, &vkBuffer, &result.allocation, &result.info);
     }
     if (res != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create buffer '" + debugName + "' (" + std::to_string(allocationSize) +
-                                 " bytes)");
+        throw std::runtime_error(
+            "Failed to create buffer '" + debugName + "' (" + std::to_string(allocationSize) + " bytes)"
+        );
     }
     result.buffer = vk::Buffer(vkBuffer);
 
     if (context->validationLayersEnabled) {
-        context->device->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT{
-            vk::ObjectType::eBuffer, reinterpret_cast<uint64_t>(vkBuffer), debugName.c_str()});
+        context->device->setDebugUtilsObjectNameEXT(
+            vk::DebugUtilsObjectNameInfoEXT{
+                vk::ObjectType::eBuffer,
+                reinterpret_cast<uint64_t>(vkBuffer),
+                debugName.c_str()
+            }
+        );
     }
     return result;
 }
 
-void Buffer::validateRange(vk::DeviceSize offset, vk::DeviceSize count, vk::DeviceSize limit,
-                           const std::string& context) {
+void Buffer::validateRange(
+    vk::DeviceSize offset,
+    vk::DeviceSize count,
+    vk::DeviceSize limit,
+    const std::string& context
+) {
     if (offset > limit || count > limit - offset) {
         throw std::runtime_error(context + " range out of bounds");
     }
 }
 
-Buffer::Buffer(const std::shared_ptr<VulkanContext>& _context, vk::DeviceSize size, vk::BufferUsageFlags usage,
-               VmaMemoryUsage vmaUsage, VmaAllocationCreateFlags flags, bool shared, vk::DeviceSize alignment,
-               std::string debugName)
-    : context(_context), size(size), alignment(alignment), shared(shared), usage(usage), vmaUsage(vmaUsage),
-      flags(flags), buffer(), allocation(nullptr), allocation_info(), debugName(std::move(debugName)) {
+Buffer::Buffer(
+    const std::shared_ptr<VulkanContext>& _context,
+    vk::DeviceSize size,
+    vk::BufferUsageFlags usage,
+    VmaMemoryUsage vmaUsage,
+    VmaAllocationCreateFlags flags,
+    bool shared,
+    vk::DeviceSize alignment,
+    std::string debugName
+)
+    : context(_context)
+    , size(size)
+    , alignment(alignment)
+    , shared(shared)
+    , usage(usage)
+    , vmaUsage(vmaUsage)
+    , flags(flags)
+    , buffer()
+    , allocation(nullptr)
+    , allocation_info()
+    , debugName(std::move(debugName)) {
     auto created = allocate(size);
     buffer = created.buffer;
     allocation = created.allocation;
@@ -86,8 +120,14 @@ Buffer::Buffer(const std::shared_ptr<VulkanContext>& _context, vk::DeviceSize si
 }
 
 Buffer Buffer::createStagingBuffer(vk::DeviceSize size) {
-    return Buffer(context, size, vk::BufferUsageFlagBits::eTransferSrc, VMA_MEMORY_USAGE_AUTO,
-                  VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, false);
+    return Buffer(
+        context,
+        size,
+        vk::BufferUsageFlagBits::eTransferSrc,
+        VMA_MEMORY_USAGE_AUTO,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        false
+    );
 }
 
 void Buffer::upload(std::span<const std::byte> data, vk::DeviceSize offset) {
@@ -114,8 +154,12 @@ void Buffer::upload(std::span<const std::byte> data, vk::DeviceSize offset) {
     }
 }
 
-void Buffer::uploadFrom(const std::shared_ptr<Buffer>& buffer, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset,
-                        vk::DeviceSize count) {
+void Buffer::uploadFrom(
+    const std::shared_ptr<Buffer>& buffer,
+    vk::DeviceSize srcOffset,
+    vk::DeviceSize dstOffset,
+    vk::DeviceSize count
+) {
     if (count == VK_WHOLE_SIZE) {
         if (srcOffset > buffer->size) {
             throw std::runtime_error("Buffer upload source offset out of range");
@@ -142,16 +186,23 @@ void Buffer::uploadFrom(const std::shared_ptr<Buffer>& buffer, vk::DeviceSize sr
             throw std::runtime_error("Buffer upload source is not mappable");
         }
         buffer->invalidate(srcOffset, count);
-        memcpy(static_cast<char*>(allocation_info.pMappedData) + dstOffset,
-               static_cast<const char*>(buffer->allocation_info.pMappedData) + srcOffset, count);
+        memcpy(
+            static_cast<char*>(allocation_info.pMappedData) + dstOffset,
+            static_cast<const char*>(buffer->allocation_info.pMappedData) + srcOffset,
+            count
+        );
         flush(dstOffset, count);
     } else {
         throw std::runtime_error("Buffer is not mappable");
     }
 }
 
-void Buffer::downloadTo(const std::shared_ptr<Buffer>& buffer, vk::DeviceSize srcOffset, vk::DeviceSize dstOffset,
-                        vk::DeviceSize count) {
+void Buffer::downloadTo(
+    const std::shared_ptr<Buffer>& buffer,
+    vk::DeviceSize srcOffset,
+    vk::DeviceSize dstOffset,
+    vk::DeviceSize count
+) {
     if (count == VK_WHOLE_SIZE) {
         if (dstOffset > buffer->size) {
             throw std::runtime_error("Buffer download destination offset out of range");
@@ -179,8 +230,11 @@ void Buffer::downloadTo(const std::shared_ptr<Buffer>& buffer, vk::DeviceSize sr
             throw std::runtime_error("Buffer download destination is not mappable");
         }
         invalidate(srcOffset, count);
-        memcpy(static_cast<char*>(buffer->allocation_info.pMappedData) + dstOffset,
-               static_cast<char*>(allocation_info.pMappedData) + srcOffset, count);
+        memcpy(
+            static_cast<char*>(buffer->allocation_info.pMappedData) + dstOffset,
+            static_cast<char*>(allocation_info.pMappedData) + srcOffset,
+            count
+        );
         buffer->flush(dstOffset, count);
     } else {
         throw std::runtime_error("Buffer is not mappable");
@@ -224,8 +278,8 @@ void Buffer::realloc(vk::DeviceSize newSize) {
     std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
     for (auto& [descriptorSet, set, binding, type] : boundDescriptorSets) {
         if (auto descriptor = descriptorSet.lock()) {
-            writeDescriptorSets.emplace_back(descriptor->descriptorSets[set].get(), binding, 0, 1, type, nullptr,
-                                             &bufferInfo);
+            writeDescriptorSets
+                .emplace_back(descriptor->descriptorSets[set].get(), binding, 0, 1, type, nullptr, &bufferInfo);
         }
     }
     if (!writeDescriptorSets.empty()) {
@@ -234,33 +288,56 @@ void Buffer::realloc(vk::DeviceSize newSize) {
     vmaDestroyBuffer(context->allocator, static_cast<VkBuffer>(oldBuffer), oldAllocation);
 }
 
-void Buffer::boundToDescriptorSet(std::weak_ptr<DescriptorSet> descriptorSet, uint32_t set, uint32_t binding,
-                                  vk::DescriptorType type) {
+void Buffer::boundToDescriptorSet(
+    std::weak_ptr<DescriptorSet> descriptorSet,
+    uint32_t set,
+    uint32_t binding,
+    vk::DescriptorType type
+) {
     boundDescriptorSets.push_back({descriptorSet, set, binding, type});
 }
 
-std::shared_ptr<Buffer> Buffer::uniform(std::shared_ptr<VulkanContext> context, vk::DeviceSize size,
-                                        bool concurrentSharing) {
+std::shared_ptr<Buffer>
+Buffer::uniform(std::shared_ptr<VulkanContext> context, vk::DeviceSize size, bool concurrentSharing) {
     return std::make_shared<Buffer>(
-        std::move(context), size, vk::BufferUsageFlagBits::eUniformBuffer, VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, concurrentSharing);
+        std::move(context),
+        size,
+        vk::BufferUsageFlagBits::eUniformBuffer,
+        VMA_MEMORY_USAGE_AUTO,
+        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+        concurrentSharing
+    );
 }
 
 std::shared_ptr<Buffer> Buffer::staging(std::shared_ptr<VulkanContext> context, vk::DeviceSize size) {
     return std::make_shared<Buffer>(
-        context, size, vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
+        context,
+        size,
+        vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
         VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, false);
+        VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        false
+    );
 }
 
-std::shared_ptr<Buffer> Buffer::storage(std::shared_ptr<VulkanContext> context, vk::DeviceSize size,
-                                        bool concurrentSharing,
-                                        vk::DeviceSize alignment, std::string debugName) {
-    return std::make_shared<Buffer>(context, size,
-                                    vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
-                                        vk::BufferUsageFlagBits::eTransferSrc,
-                                    VMA_MEMORY_USAGE_GPU_ONLY, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-                                    concurrentSharing, alignment, debugName);
+std::shared_ptr<Buffer> Buffer::storage(
+    std::shared_ptr<VulkanContext> context,
+    vk::DeviceSize size,
+    bool concurrentSharing,
+    vk::DeviceSize alignment,
+    std::string debugName
+) {
+    return std::make_shared<Buffer>(
+        context,
+        size,
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst |
+            vk::BufferUsageFlagBits::eTransferSrc,
+        VMA_MEMORY_USAGE_GPU_ONLY,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        concurrentSharing,
+        alignment,
+        debugName
+    );
 }
 
 void Buffer::assertEquals(std::span<const std::byte> expected) {
@@ -323,6 +400,8 @@ void Buffer::transferToComputeReadBarrier(vk::CommandBuffer commandBuffer) {
 std::vector<char> Buffer::download() {
     auto stagingBuffer = Buffer::staging(context, size);
     downloadTo(stagingBuffer);
-    return {(char*)stagingBuffer->allocation_info.pMappedData,
-            ((char*)stagingBuffer->allocation_info.pMappedData) + size};
+    return {
+        (char*)stagingBuffer->allocation_info.pMappedData,
+        ((char*)stagingBuffer->allocation_info.pMappedData) + size
+    };
 }

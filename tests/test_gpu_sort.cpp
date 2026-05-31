@@ -1,9 +1,9 @@
 #include "test_support.hpp"
 
 #include "GpuConstants.hpp"
-#include "render/PassSizing.hpp"
 #include "render/GpuTypes.hpp"
-#include "shaders.h"
+#include "render/PassSizing.hpp"
+#include "shaders.hpp"
 #include "vulkan/Buffer.hpp"
 #include "vulkan/DescriptorSet.hpp"
 #include "vulkan/Shader.hpp"
@@ -32,8 +32,11 @@ struct SortResult {
     std::vector<uint32_t> payloads;
 };
 
-SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::vector<uint64_t>& inputKeys,
-                      VulkanContext::RadixSortMode mode) {
+SortResult runGpuSort(
+    const std::shared_ptr<VulkanContext>& context,
+    const std::vector<uint64_t>& inputKeys,
+    VulkanContext::RadixSortMode mode
+) {
     if (inputKeys.size() > std::numeric_limits<uint32_t>::max()) {
         throw std::runtime_error("GPU sort test input exceeds uint32_t");
     }
@@ -80,10 +83,10 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     sortSet->bindBufferToDescriptorSet(4, DescriptorType::eStorageBuffer, ShaderStageFlagBits::eCompute, hist);
     sortSet->build();
 
-    const auto sortShader = mode == VulkanContext::RadixSortMode::FastSubgroup32
-                                ? std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len)
-                                : std::make_shared<Shader>(context, "sort_portable", SPV_SORT_PORTABLE,
-                                                           SPV_SORT_PORTABLE_len);
+    const auto sortShader =
+        mode == VulkanContext::RadixSortMode::FastSubgroup32
+            ? std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len)
+            : std::make_shared<Shader>(context, "sort_portable", SPV_SORT_PORTABLE, SPV_SORT_PORTABLE_len);
     auto sortPipeline = std::make_shared<ComputePipeline>(context, sortShader);
     sortPipeline->addDescriptorSet(0, sortSet);
     sortPipeline->addPushConstant(ShaderStageFlagBits::eCompute, 0, sizeof(vkgs::render::RadixSortPushConstants));
@@ -103,14 +106,24 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
         const uint32_t option = i % 2 == 0 ? 0 : 1;
 
         histPipeline->bind(cmd, 0, option);
-        cmd->pushConstants(histPipeline->pipelineLayout.get(), ShaderStageFlagBits::eCompute, 0,
-                           sizeof(vkgs::render::RadixSortPushConstants), &pc);
+        cmd->pushConstants(
+            histPipeline->pipelineLayout.get(),
+            ShaderStageFlagBits::eCompute,
+            0,
+            sizeof(vkgs::render::RadixSortPushConstants),
+            &pc
+        );
         cmd->dispatch(invocationSize, 1, 1);
         hist->computeWriteReadBarrier(cmd.get());
 
         sortPipeline->bind(cmd, 0, option);
-        cmd->pushConstants(sortPipeline->pipelineLayout.get(), ShaderStageFlagBits::eCompute, 0,
-                           sizeof(vkgs::render::RadixSortPushConstants), &pc);
+        cmd->pushConstants(
+            sortPipeline->pipelineLayout.get(),
+            ShaderStageFlagBits::eCompute,
+            0,
+            sizeof(vkgs::render::RadixSortPushConstants),
+            &pc
+        );
         cmd->dispatch(invocationSize, 1, 1);
 
         if (option == 0) {
@@ -135,8 +148,11 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     return result;
 }
 
-void expectSortedMatchesReference(const std::shared_ptr<VulkanContext>& context, const std::vector<uint64_t>& input,
-                                  VulkanContext::RadixSortMode mode) {
+void expectSortedMatchesReference(
+    const std::shared_ptr<VulkanContext>& context,
+    const std::vector<uint64_t>& input,
+    VulkanContext::RadixSortMode mode
+) {
     auto result = runGpuSort(context, input, mode);
 
     std::vector<uint64_t> reference = input;

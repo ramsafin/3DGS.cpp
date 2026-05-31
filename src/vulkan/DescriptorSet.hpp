@@ -1,8 +1,8 @@
 #ifndef VULKAN_SPLATTING_DESCRIPTORSET_H
 #define VULKAN_SPLATTING_DESCRIPTORSET_H
 
-#include "VulkanContext.hpp"
 #include "RenderImageView.hpp"
+#include "VulkanContext.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -26,15 +26,23 @@ class DescriptorSet : public std::enable_shared_from_this<DescriptorSet> {
 
     explicit DescriptorSet(const std::shared_ptr<VulkanContext>& context, uint8_t framesInFlight = 1);
 
-    void bindBufferToDescriptorSet(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlagBits stage,
-                                   std::shared_ptr<Buffer> buffer);
+    void bindBufferToDescriptorSet(
+        uint32_t binding,
+        vk::DescriptorType type,
+        vk::ShaderStageFlagBits stage,
+        std::shared_ptr<Buffer> buffer
+    );
 
     void build();
 
     vk::DescriptorSet getDescriptorSet(uint8_t currentFrame, uint8_t option) const;
 
-    void bindImageToDescriptorSet(uint32_t i, vk::DescriptorType descriptor, vk::ShaderStageFlagBits stage,
-                                  const vkgs::vulkan::RenderImageView& image);
+    void bindImageToDescriptorSet(
+        uint32_t i,
+        vk::DescriptorType descriptor,
+        vk::ShaderStageFlagBits stage,
+        const vkgs::vulkan::RenderImageView& image
+    );
 
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
 

@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -23,6 +24,7 @@ struct PlyVertexRecord {
 
 static_assert(sizeof(float) == 4, "PLY loader requires 32-bit floats");
 static_assert(sizeof(PlyVertexRecord) == 62 * sizeof(float), "PLY disk vertex must contain exactly 62 floats");
+static_assert(alignof(PlyVertexRecord) == alignof(float), "PLY disk vertex alignment mismatch");
 
 SceneBounds calculateBounds(const std::vector<vkgs::render::SceneVertex>& vertices) {
     glm::vec3 minPosition(std::numeric_limits<float>::max());
@@ -46,12 +48,13 @@ vkgs::render::SceneVertex convertVertex(const PlyVertexRecord& diskVertex) {
     vkgs::render::SceneVertex vertex{};
     const glm::vec3 position(diskVertex.position[0], diskVertex.position[1], diskVertex.position[2]);
     vertex.position = glm::vec4(position, 1.0f);
-    vertex.scaleOpacity =
-        glm::vec4(glm::exp(glm::vec3(diskVertex.scale[0], diskVertex.scale[1], diskVertex.scale[2])),
-                  1.0f / (1.0f + std::exp(-diskVertex.opacity)));
+    vertex.scaleOpacity = glm::vec4(
+        glm::exp(glm::vec3(diskVertex.scale[0], diskVertex.scale[1], diskVertex.scale[2])),
+        1.0f / (1.0f + std::exp(-diskVertex.opacity))
+    );
 
-    const glm::vec4 rotation(diskVertex.rotation[0], diskVertex.rotation[1], diskVertex.rotation[2],
-                             diskVertex.rotation[3]);
+    const glm::vec4
+        rotation(diskVertex.rotation[0], diskVertex.rotation[1], diskVertex.rotation[2], diskVertex.rotation[3]);
     if (glm::length(rotation) == 0.0f) {
         throw std::runtime_error("PLY vertex contains a zero quaternion");
     }
@@ -70,7 +73,8 @@ vkgs::render::SceneVertex convertVertex(const PlyVertexRecord& diskVertex) {
 
 } // namespace
 
-PlyReader::PlyReader(std::filesystem::path filename) : filename(std::move(filename)) {
+PlyReader::PlyReader(std::filesystem::path filename)
+    : filename(std::move(filename)) {
     if (!std::filesystem::exists(this->filename)) {
         throw std::runtime_error("File does not exist: " + this->filename.string());
     }
@@ -87,7 +91,7 @@ GaussianSceneData PlyReader::read() const {
     std::vector<vkgs::render::SceneVertex> vertices;
     vertices.reserve(header.numVertices);
     for (uint32_t index = 0; index < header.numVertices; ++index) {
-        PlyVertexRecord diskVertex;
+        PlyVertexRecord diskVertex{};
         plyFile.read(reinterpret_cast<char*>(&diskVertex), sizeof(diskVertex));
         if (!plyFile) {
             throw std::runtime_error("Unexpected end of PLY vertex data in " + filename.string());
@@ -119,7 +123,11 @@ PlyHeader PlyReader::loadHeader(std::ifstream& plyFile) const {
     std::string line;
     bool sawMagic = false;
     bool headerEnd = false;
-    enum class CurrentElement { None, Vertex, Face } current = CurrentElement::None;
+    enum class CurrentElement : uint8_t {
+        None,
+        Vertex,
+        Face
+    } current = CurrentElement::None;
 
     while (std::getline(plyFile, line)) {
         std::istringstream input(line);
@@ -159,7 +167,10 @@ PlyHeader PlyReader::loadHeader(std::ifstream& plyFile) const {
                 std::string countType;
                 std::string elementType;
                 input >> countType >> elementType >> property.name;
-                property.type += " " + countType + " " + elementType;
+                property.type += ' ';
+                property.type += countType;
+                property.type += ' ';
+                property.type += elementType;
             } else {
                 input >> property.name;
             }
@@ -188,23 +199,27 @@ PlyHeader PlyReader::loadHeader(std::ifstream& plyFile) const {
 
 void PlyReader::validateLayout(const PlyHeader& header) {
     if (header.format != "binary_little_endian") {
-        throw std::runtime_error("Unsupported PLY format '" + header.format +
-                                 "'; only binary_little_endian is supported");
+        throw std::runtime_error(
+            "Unsupported PLY format '" + header.format + "'; only binary_little_endian is supported"
+        );
     }
 
     static constexpr size_t kExpectedVertexProperties = 62;
     if (header.vertexProperties.size() != kExpectedVertexProperties) {
-        throw std::runtime_error("Unexpected PLY vertex property count: got " +
-                                 std::to_string(header.vertexProperties.size()) + ", expected " +
-                                 std::to_string(kExpectedVertexProperties));
+        throw std::runtime_error(
+            "Unexpected PLY vertex property count: got " + std::to_string(header.vertexProperties.size()) +
+            ", expected " + std::to_string(kExpectedVertexProperties)
+        );
     }
 
     std::vector<std::string> expectedNames = {"x", "y", "z", "nx", "ny", "nz", "f_dc_0", "f_dc_1", "f_dc_2"};
     for (uint32_t index = 0; index < 45; ++index) {
         expectedNames.push_back("f_rest_" + std::to_string(index));
     }
-    expectedNames.insert(expectedNames.end(),
-                         {"opacity", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3"});
+    expectedNames.insert(
+        expectedNames.end(),
+        {"opacity", "scale_0", "scale_1", "scale_2", "rot_0", "rot_1", "rot_2", "rot_3"}
+    );
 
     for (size_t index = 0; index < header.vertexProperties.size(); ++index) {
         const auto& property = header.vertexProperties[index];
@@ -212,8 +227,10 @@ void PlyReader::validateLayout(const PlyHeader& header) {
             throw std::runtime_error("PLY vertex property '" + property.name + "' must be of type float");
         }
         if (property.name != expectedNames[index]) {
-            throw std::runtime_error("Unexpected PLY vertex property order at index " + std::to_string(index) +
-                                     ": got '" + property.name + "', expected '" + expectedNames[index] + "'");
+            throw std::runtime_error(
+                "Unexpected PLY vertex property order at index " + std::to_string(index) + ": got '" + property.name +
+                "', expected '" + expectedNames[index] + "'"
+            );
         }
     }
 }

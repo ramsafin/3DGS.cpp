@@ -24,10 +24,12 @@ struct RenderJob {
     std::vector<RenderFrame> frames;
 };
 
-[[nodiscard]] RenderJob loadRenderJob(const std::filesystem::path& configPath,
-                                      std::optional<std::filesystem::path> outputDirectoryOverride = std::nullopt,
-                                      std::optional<uint8_t> physicalDeviceOverride = std::nullopt,
-                                      bool enableValidation = false);
+[[nodiscard]] RenderJob loadRenderJob(
+    const std::filesystem::path& configPath,
+    std::optional<std::filesystem::path> outputDirectoryOverride = std::nullopt,
+    std::optional<uint8_t> physicalDeviceOverride = std::nullopt,
+    bool enableValidation = false
+);
 
 } // namespace vkgs::offscreen
 

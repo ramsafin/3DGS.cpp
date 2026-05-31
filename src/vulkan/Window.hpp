@@ -33,7 +33,8 @@ class Window {
         return 0.0;
     }
 
-    virtual void mouseCapture(bool capture) {}
+    virtual void mouseCapture(bool capture) {
+    }
 
     virtual bool tick() {
         return false;

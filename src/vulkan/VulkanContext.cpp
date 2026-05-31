@@ -47,9 +47,12 @@ bool supportsFastRadixSort(vk::PhysicalDevice device) {
 }
 } // namespace
 
-VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                       VkDebugUtilsMessageTypeFlagsEXT messageType,
-                       const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+VkBool32 debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+    void* pUserData
+) {
     const char* type = "???";
     if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
         type = "GENERAL";
@@ -73,10 +76,14 @@ VkBool32 debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     return VK_FALSE;
 }
 
-VulkanContext::VulkanContext(const std::vector<std::string>& instance_extensions,
-                             const std::vector<std::string>& device_extensions, bool validation_layers_enabled)
-    : instanceExtensions(instance_extensions), deviceExtensions(device_extensions),
-      validationLayersEnabled(validation_layers_enabled) {
+VulkanContext::VulkanContext(
+    const std::vector<std::string>& instance_extensions,
+    const std::vector<std::string>& device_extensions,
+    bool validation_layers_enabled
+)
+    : instanceExtensions(instance_extensions)
+    , deviceExtensions(device_extensions)
+    , validationLayersEnabled(validation_layers_enabled) {
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 #endif
@@ -92,8 +99,8 @@ VulkanContext::VulkanContext(const std::vector<std::string>& instance_extensions
 }
 
 void VulkanContext::createInstance() {
-    vk::ApplicationInfo appInfo = {"Vulkan Splatting", VK_MAKE_VERSION(1, 0, 0), "No Engine", VK_MAKE_VERSION(1, 0, 0),
-                                   VK_API_VERSION_1_2};
+    vk::ApplicationInfo appInfo =
+        {"Vulkan Splatting", VK_MAKE_VERSION(1, 0, 0), "No Engine", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_2};
 
     std::vector<const char*> requiredLayers;
     if (validationLayersEnabled) {
@@ -113,7 +120,8 @@ void VulkanContext::createInstance() {
              vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo,
          vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
              vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-         debugCallback}};
+         debugCallback}
+    };
 
     if (!validationLayersEnabled) {
         createInfoChain.unlink<vk::DebugUtilsMessengerCreateInfoEXT>();
@@ -128,10 +136,12 @@ bool VulkanContext::isDeviceSuitable(vk::PhysicalDevice device, std::optional<vk
     return getDeviceUnsuitabilityReasons(device, surface).empty();
 }
 
-std::vector<std::string> VulkanContext::getDeviceUnsuitabilityReasons(vk::PhysicalDevice device,
-                                                                      std::optional<vk::SurfaceKHR> surface) const {
-    return vkgs::vulkan::getUnsuitabilityReasons(getDeviceRequirements(surface.has_value()),
-                                                 inspectDeviceCapabilities(device, surface));
+std::vector<std::string>
+VulkanContext::getDeviceUnsuitabilityReasons(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const {
+    return vkgs::vulkan::getUnsuitabilityReasons(
+        getDeviceRequirements(surface.has_value()),
+        inspectDeviceCapabilities(device, surface)
+    );
 }
 
 vkgs::vulkan::DeviceRequirements VulkanContext::getDeviceRequirements(bool requirePresentation) const {
@@ -150,8 +160,8 @@ vkgs::vulkan::DeviceRequirements VulkanContext::getDeviceRequirements(bool requi
     return requirements;
 }
 
-vkgs::vulkan::VulkanDeviceCapabilities VulkanContext::inspectDeviceCapabilities(
-    vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const {
+vkgs::vulkan::VulkanDeviceCapabilities
+VulkanContext::inspectDeviceCapabilities(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const {
     vkgs::vulkan::VulkanDeviceCapabilities capabilities;
     const auto properties = device.getProperties();
     capabilities.apiVersion = properties.apiVersion;
@@ -167,8 +177,10 @@ vkgs::vulkan::VulkanDeviceCapabilities VulkanContext::inspectDeviceCapabilities(
         const auto& queueFamily = queueFamilies[index];
         capabilities.queueFamilies.push_back(
             {static_cast<bool>(queueFamily.queueFlags & vk::QueueFlagBits::eGraphics),
-             static_cast<bool>(queueFamily.queueFlags & vk::QueueFlagBits::eCompute), queueFamily.timestampValidBits > 0,
-             surface.has_value() && device.getSurfaceSupportKHR(index, surface.value())});
+             static_cast<bool>(queueFamily.queueFlags & vk::QueueFlagBits::eCompute),
+             queueFamily.timestampValidBits > 0,
+             surface.has_value() && device.getSurfaceSupportKHR(index, surface.value())}
+        );
     }
 
     if (properties.apiVersion >= VK_API_VERSION_1_2) {
@@ -190,9 +202,8 @@ vkgs::vulkan::VulkanDeviceCapabilities VulkanContext::inspectDeviceCapabilities(
     const auto offscreenFormatProperties = device.getFormatProperties(vk::Format::eR8G8B8A8Unorm);
     const auto requiredOffscreenFormatFeatures =
         vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eTransferSrc;
-    capabilities.offscreenStorageTransferFormat =
-        (offscreenFormatProperties.optimalTilingFeatures & requiredOffscreenFormatFeatures) ==
-        requiredOffscreenFormatFeatures;
+    capabilities.offscreenStorageTransferFormat = (offscreenFormatProperties.optimalTilingFeatures &
+                                                   requiredOffscreenFormatFeatures) == requiredOffscreenFormatFeatures;
 
     if (surface.has_value()) {
         const auto surfaceCapabilities = device.getSurfaceCapabilitiesKHR(surface.value());
@@ -243,8 +254,11 @@ void VulkanContext::selectPhysicalDevice(std::optional<uint8_t> id, std::optiona
         if (reasons.empty()) {
             suitableDevices.push_back(device);
         } else {
-            spdlog::warn("Skipping Vulkan physical device '{}': {}", device.getProperties().deviceName.data(),
-                         joinReasons(reasons));
+            spdlog::warn(
+                "Skipping Vulkan physical device '{}': {}",
+                device.getProperties().deviceName.data(),
+                joinReasons(reasons)
+            );
         }
     }
 
@@ -274,7 +288,8 @@ VulkanContext::QueueFamilyIndices VulkanContext::findQueueFamilies() {
             {static_cast<bool>(queueFamilies[index].queueFlags & vk::QueueFlagBits::eGraphics),
              static_cast<bool>(queueFamilies[index].queueFlags & vk::QueueFlagBits::eCompute),
              queueFamilies[index].timestampValidBits > 0,
-             surface.has_value() && physicalDevice.getSurfaceSupportKHR(index, *surface.value())});
+             surface.has_value() && physicalDevice.getSurfaceSupportKHR(index, *surface.value())}
+        );
     }
     return vkgs::vulkan::selectQueueFamilies(capabilities, getDeviceRequirements(surface.has_value()));
 }
@@ -290,8 +305,10 @@ void VulkanContext::updateSelectedDeviceCapabilities() {
     radixSortMode = supportsFastRadixSort(physicalDevice) ? RadixSortMode::FastSubgroup32 : RadixSortMode::Portable;
 
     spdlog::info("Timestamp metrics: {}", timestampQueriesSupported ? "enabled" : "disabled");
-    spdlog::info("Radix sort mode: {}",
-                 radixSortMode == RadixSortMode::FastSubgroup32 ? "fast subgroup-32" : "portable");
+    spdlog::info(
+        "Radix sort mode: {}",
+        radixSortMode == RadixSortMode::FastSubgroup32 ? "fast subgroup-32" : "portable"
+    );
 }
 
 void VulkanContext::createQueryPool() {
@@ -309,9 +326,11 @@ void VulkanContext::createQueryPool() {
     endOneTimeCommandBuffer(std::move(commandBuffer), Queue::COMPUTE);
 }
 
-void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeatures,
-                                        vk::PhysicalDeviceVulkan11Features deviceFeatures11,
-                                        vk::PhysicalDeviceVulkan12Features deviceFeatures12) {
+void VulkanContext::createLogicalDevice(
+    vk::PhysicalDeviceFeatures deviceFeatures,
+    vk::PhysicalDeviceVulkan11Features deviceFeatures11,
+    vk::PhysicalDeviceVulkan12Features deviceFeatures12
+) {
     QueueFamilyIndices indices = findQueueFamilies();
     if (!indices.computeFamily.has_value()) {
         throw std::runtime_error("Selected device lacks a required compute queue family");
@@ -342,8 +361,15 @@ void VulkanContext::createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeature
     auto deviceExtensionsCharPtr = vkgs::vulkan::toCStringPointers(deviceExtensions);
 
     vk::DeviceCreateInfo createInfo = {
-        {},      (uint32_t)queueCreateInfos.size(),        queueCreateInfos.data(),        0,
-        nullptr, (uint32_t)deviceExtensionsCharPtr.size(), deviceExtensionsCharPtr.data(), &deviceFeatures};
+        {},
+        (uint32_t)queueCreateInfos.size(),
+        queueCreateInfos.data(),
+        0,
+        nullptr,
+        (uint32_t)deviceExtensionsCharPtr.size(),
+        deviceExtensionsCharPtr.data(),
+        &deviceFeatures
+    };
     createInfo.pNext = &deviceFeatures11;
     deviceFeatures11.pNext = &deviceFeatures12;
 
@@ -426,10 +452,15 @@ void VulkanContext::createDescriptorPool(uint8_t framesInFlight) {
     std::vector<vk::DescriptorPoolSize> poolSizes = {
         {vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(framesInFlight * 10)},
         {vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(framesInFlight * 50)},
-        {vk::DescriptorType::eStorageImage, static_cast<uint32_t>(framesInFlight * 10)}};
+        {vk::DescriptorType::eStorageImage, static_cast<uint32_t>(framesInFlight * 10)}
+    };
 
-    vk::DescriptorPoolCreateInfo poolInfo{vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, 100,
-                                          static_cast<uint32_t>(poolSizes.size()), poolSizes.data()};
+    vk::DescriptorPoolCreateInfo poolInfo{
+        vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        100,
+        static_cast<uint32_t>(poolSizes.size()),
+        poolSizes.data()
+    };
 
     descriptorPool = device->createDescriptorPoolUnique(poolInfo);
 }

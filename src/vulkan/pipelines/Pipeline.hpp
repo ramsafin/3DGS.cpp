@@ -17,9 +17,15 @@ class Pipeline {
         uint32_t value;
         std::vector<uint32_t> values;
 
-        DescriptorOption(uint32_t value) : multiple(false), value(value) {}
+        DescriptorOption(uint32_t value)
+            : multiple(false)
+            , value(value) {
+        }
 
-        DescriptorOption(std::vector<uint32_t> values) : multiple(true), values(std::move(values)) {}
+        DescriptorOption(std::vector<uint32_t> values)
+            : multiple(true)
+            , values(std::move(values)) {
+        }
 
         [[nodiscard]] uint32_t get(size_t index) const;
     };

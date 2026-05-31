@@ -1,7 +1,7 @@
-#include <3dgs/OffscreenRenderer.hpp>
 #include "OutputFilename.hpp"
 #include "PpmWriter.hpp"
 #include "RenderJob.hpp"
+#include <3dgs/OffscreenRenderer.hpp>
 
 #include <cstdint>
 #include <cstdlib>
@@ -78,8 +78,8 @@ int main(int argc, char** argv) {
             spdlog::set_level(spdlog::level::debug);
         }
 
-        const auto job = vkgs::offscreen::loadRenderJob(cli.configPath, cli.outputDirectory, cli.physicalDeviceId,
-                                                        cli.validation);
+        const auto job =
+            vkgs::offscreen::loadRenderJob(cli.configPath, cli.outputDirectory, cli.physicalDeviceId, cli.validation);
         fs::create_directories(job.outputDirectory);
         vkgs::OffscreenRenderer renderer(job.renderer);
         for (size_t index = 0; index < job.frames.size(); ++index) {

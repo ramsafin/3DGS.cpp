@@ -39,15 +39,13 @@ FormatStyle: file
 CheckOptions:
   - key: bugprone-exception-escape.CheckMain
     value: false
-  - key: modernize-use-nullptr.IgnoreMacros
-    value: true
   - key: readability-identifier-length.MinimumVariableNameLength
     value: 3
   - key: readability-identifier-length.MinimumLoopCounterNameLength
     value: 1
   - key: readability-identifier-length.IgnoredVariableNames
-    value: 'x;y;z;t'
+    value: 'x;y;z;t;px;py;pz;qw;qx;qy;qz'
   - key: readability-identifier-length.IgnoredParameterNames
-    value: 'x;y;z;t;i;j;k'
+    value: 'x;y;z;t;i;j;k;px;py;pz;qw;qx;qy;qz'
   - key: readability-identifier-length.IgnoredLoopCounterNames
     value: 'i;j;k'

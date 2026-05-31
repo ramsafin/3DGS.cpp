@@ -7,13 +7,16 @@
 namespace vkgs {
 class OffscreenRenderer::Impl {
   public:
-    explicit Impl(OffscreenConfig configuration) : session(std::move(configuration)) {}
+    explicit Impl(OffscreenConfig configuration)
+        : session(std::move(configuration)) {
+    }
 
     session::OffscreenSession session;
 };
 
 OffscreenRenderer::OffscreenRenderer(OffscreenConfig configuration)
-    : impl(std::make_unique<Impl>(std::move(configuration))) {}
+    : impl(std::make_unique<Impl>(std::move(configuration))) {
+}
 
 OffscreenRenderer::~OffscreenRenderer() = default;
 OffscreenRenderer::OffscreenRenderer(OffscreenRenderer&&) noexcept = default;

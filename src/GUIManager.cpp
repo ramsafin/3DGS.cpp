@@ -64,8 +64,15 @@ void GUIManager::buildGui() {
         ImPlot::SetNextFillStyle(IMPLOT_AUTO_COL, 0.5f);
         for (auto& [name, values] : *metricsMap) {
             if (!values.data.empty()) {
-                ImPlot::PlotLine(name.c_str(), &values.data[0].x, &values.data[0].y, values.data.size(), 0,
-                                 values.offset, 2 * sizeof(float));
+                ImPlot::PlotLine(
+                    name.c_str(),
+                    &values.data[0].x,
+                    &values.data[0].y,
+                    values.data.size(),
+                    0,
+                    values.offset,
+                    2 * sizeof(float)
+                );
             }
         }
         ImPlot::EndPlot();
@@ -98,8 +105,13 @@ void GUIManager::buildGui() {
     ImGui::Text("View rotated 180: %s", viewRotated180 ? "true" : "false");
     ImGui::Separator();
     ImGui::Text("Position: %.3f, %.3f, %.3f", cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    ImGui::Text("Rotation quat [w,x,y,z]: %.4f, %.4f, %.4f, %.4f", cameraRotation.w, cameraRotation.x,
-                cameraRotation.y, cameraRotation.z);
+    ImGui::Text(
+        "Rotation quat [w,x,y,z]: %.4f, %.4f, %.4f, %.4f",
+        cameraRotation.w,
+        cameraRotation.x,
+        cameraRotation.y,
+        cameraRotation.z
+    );
     ImGui::End();
 
     if (!wantCaptureKeyboard()) {

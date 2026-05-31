@@ -44,8 +44,11 @@ TEST(PlyParser, RoutesPropertiesToVertexElement) {
 
 TEST(PlyParser, RoutesPropertiesToFaceElement) {
     const auto path = golden("face_properties.ply");
-    writeFixture(path, "ply\nformat binary_little_endian 1.0\nelement vertex 1\nproperty float x\n"
-                       "element face 1\nproperty list uchar int vertex_indices\nend_header\n");
+    writeFixture(
+        path,
+        "ply\nformat binary_little_endian 1.0\nelement vertex 1\nproperty float x\n"
+        "element face 1\nproperty list uchar int vertex_indices\nend_header\n"
+    );
     const auto header = vkgs::scene::PlyReader(path).parseHeaderOnly();
 
     EXPECT_EQ(header.vertexProperties.size(), 1u);

@@ -11,8 +11,11 @@ class GLFWWindow;
 
 class ImguiManager {
   public:
-    ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain,
-                 std::shared_ptr<GLFWWindow> window);
+    ImguiManager(
+        std::shared_ptr<VulkanContext> context,
+        std::shared_ptr<Swapchain> swapchain,
+        std::shared_ptr<GLFWWindow> window
+    );
 
     void createCommandPool();
 

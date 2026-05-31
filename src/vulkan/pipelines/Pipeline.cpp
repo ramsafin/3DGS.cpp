@@ -14,7 +14,9 @@ uint32_t Pipeline::DescriptorOption::get(size_t index) const {
     }
 }
 
-Pipeline::Pipeline(const std::shared_ptr<VulkanContext>& _context) : context(_context) {}
+Pipeline::Pipeline(const std::shared_ptr<VulkanContext>& _context)
+    : context(_context) {
+}
 
 void Pipeline::addDescriptorSet(uint32_t set, std::shared_ptr<DescriptorSet> descriptorSet) {
     descriptorSets[set] = std::move(descriptorSet);
@@ -45,8 +47,8 @@ void Pipeline::bind(const vk::UniqueCommandBuffer& commandBuffer, uint8_t curren
         descriptorSetsToBind.push_back(descriptorSet.second->getDescriptorSet(currentFrame, option.get(ind++)));
     }
 
-    commandBuffer->bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout.get(), 0, descriptorSetsToBind,
-                                      nullptr);
+    commandBuffer
+        ->bindDescriptorSets(vk::PipelineBindPoint::eCompute, pipelineLayout.get(), 0, descriptorSetsToBind, nullptr);
 }
 
 void Pipeline::addPushConstant(vk::ShaderStageFlags stageFlags, uint32_t offset, uint32_t size) {

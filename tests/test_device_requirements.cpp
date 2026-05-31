@@ -28,8 +28,8 @@ bool contains(const std::vector<std::string>& reasons, const std::string& reason
 } // namespace
 
 TEST(DeviceRequirements, SelectsUnifiedQueueForViewer) {
-    const std::vector<vkgs::vulkan::QueueFamilyCapabilities> queues = {
-        {true, false, true, false}, {false, true, true, false}, {true, true, true, true}};
+    const std::vector<vkgs::vulkan::QueueFamilyCapabilities> queues =
+        {{true, false, true, false}, {false, true, true, false}, {true, true, true, true}};
     vkgs::vulkan::DeviceRequirements requirements;
     requirements.unifiedGraphicsComputeTimestampQueue = true;
 
@@ -41,7 +41,9 @@ TEST(DeviceRequirements, SelectsUnifiedQueueForViewer) {
 
 TEST(DeviceRequirements, PrefersTimestampComputeQueueForOffscreen) {
     const std::vector<vkgs::vulkan::QueueFamilyCapabilities> queues = {
-        {false, true, false, false}, {false, true, true, false}};
+        {false, true, false, false},
+        {false, true, true, false}
+    };
 
     const auto selected = vkgs::vulkan::selectQueueFamilies(queues, {});
     EXPECT_EQ(selected.computeFamily, 1u);

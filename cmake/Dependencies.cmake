@@ -1,7 +1,5 @@
 include(FetchContent)
 
-set(FETCH_CONTENT_QUIET OFF CACHE BOOL "Show FetchContent progress" FORCE)
-
 vkgs_declare_archive(glm
     "https://github.com/g-truc/glm/archive/refs/tags/1.0.3.tar.gz"
     "6775e47231a446fd086d660ecc18bcd076531cfedd912fbd66e576b118607001"
@@ -26,6 +24,8 @@ set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_INSTALL OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(glm spdlog vulkan_headers)
+vkgs_enable_msvc_utf8(spdlog)
+vkgs_require_msvc_ninja_environment(spdlog)
 
 add_library(vkgs_vulkan_headers INTERFACE)
 target_include_directories(vkgs_vulkan_headers SYSTEM INTERFACE "${vulkan_headers_SOURCE_DIR}/include")
@@ -39,6 +39,10 @@ if(VKGS_BUILD_TESTS)
     set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
     set(BUILD_GMOCK ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
+    vkgs_require_msvc_ninja_environment(gtest)
+    vkgs_require_msvc_ninja_environment(gtest_main)
+    vkgs_require_msvc_ninja_environment(gmock)
+    vkgs_require_msvc_ninja_environment(gmock_main)
 endif()
 
 if(VKGS_BUILD_VIEWER)
@@ -56,6 +60,7 @@ if(VKGS_BUILD_VIEWER)
     set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(glfw imgui)
+    vkgs_require_msvc_ninja_environment(glfw)
 endif()
 
 if(VKGS_BUILD_OFFSCREEN_APP OR VKGS_BUILD_TESTS)

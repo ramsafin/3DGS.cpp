@@ -71,6 +71,7 @@ Available configure/build presets:
 | `windows-msvc-onscreen-release` | Viewer + off-screen app | Release | `3dgs_viewer.exe`, `3dgs_render.exe` |
 | `windows-msvc-offscreen-debug` | Core + off-screen app + tests | Debug | `3dgs_render.exe` |
 | `windows-msvc-offscreen-release` | Core + off-screen app | Release | `3dgs_render.exe` |
+| `windows-msvc-tooling-debug` | Viewer + off-screen app + tests + tooling targets | Debug | all project targets |
 
 Binaries are written to `build/<preset>/apps/viewer/` or `build/<preset>/apps/offscreen/`.
 
@@ -170,6 +171,18 @@ Presets export `compile_commands.json` and the active database is mirrored to
 Only one preset owns the stable compilation database at a time - refresh it after switching build
 components or compiler.
 
+For the broadest editor database, configure and build the tooling preset:
+
+```powershell
+cmake --preset windows-msvc-tooling-debug
+cmake --build --preset windows-msvc-tooling-debug
+```
+
+CMake owns the stable `build/compile_commands.json` copy through the
+`vkgs_refresh_compile_commands` target. Use `vkgs_format_check`, `vkgs_format`, and `vkgs_tidy` for
+explicit formatting and static-analysis runs; these targets are intentionally not part of the
+default build.
+
 ## Project Structure
 
 ```text
@@ -190,19 +203,6 @@ components or compiler.
     offscreen/             # 3dgs_render
   tools/embed_shaders.py   # Host-side SPIR-V -> C++ header embedder
 ```
-
-## Roadmap
-
-- **Compute pass extraction** - split the remaining monolithic `Renderer` internals into explicit
-  covariance, preprocess, radix-sort, and tile-render modules coordinated by a pipeline object.
-- **Public window adapter API** - expand the current bundled GLFW adapter into a custom surface/input
-  adapter contract without leaking renderer internals.
-- **OHOS/HarmonyOS support** - the `ohos-arm64-core-*` presets currently target a static core
-  library only (requires `OHOS_SDK_NATIVE`). A runnable OHOS application still needs native surface
-  creation, module packaging, deployment, and remote-debug wiring. GPUs with a subgroup size other
-  than 32 also need a revised or specialized radix-sort shader.
-- **Package polish** - export optional viewer targets and keep the external-consumer package test
-  green as the public API stabilizes.
 
 ## License
 

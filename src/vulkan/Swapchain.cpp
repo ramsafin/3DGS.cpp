@@ -1,13 +1,18 @@
 #include "Swapchain.hpp"
 
-#include "glm/glm.hpp"
-#include "spdlog/spdlog.h"
+#include <glm/glm.hpp>
+#include <spdlog/spdlog.h>
 
 #include <vk_enum_string_helper.h>
 
-Swapchain::Swapchain(const std::shared_ptr<VulkanContext>& context, const std::shared_ptr<Window>& window,
-                     bool immediate)
-    : context(context), window(window), immediate(immediate) {
+Swapchain::Swapchain(
+    const std::shared_ptr<VulkanContext>& context,
+    const std::shared_ptr<Window>& window,
+    bool immediate
+)
+    : context(context)
+    , window(window)
+    , immediate(immediate) {
     createSwapchain();
     createSwapchainImages();
 }
@@ -51,9 +56,13 @@ void Swapchain::createSwapchain() {
         extent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
     }
 
-    spdlog::debug("Swapchain extent range: {}x{} - {}x{}", capabilities.minImageExtent.width,
-                  capabilities.minImageExtent.height, capabilities.maxImageExtent.width,
-                  capabilities.maxImageExtent.height);
+    spdlog::debug(
+        "Swapchain extent range: {}x{} - {}x{}",
+        capabilities.minImageExtent.width,
+        capabilities.minImageExtent.height,
+        capabilities.maxImageExtent.width,
+        capabilities.maxImageExtent.height
+    );
 
     // Request one extra image for triple buffering, clamped to the device limit
     // (maxImageCount == 0 means "no upper bound") (VKGS-018).
@@ -115,7 +124,8 @@ void Swapchain::createSwapchainImages() {
 
     for (auto& image : images) {
         auto imageView = context->device->createImageViewUnique(
-            {{}, image, vk::ImageViewType::e2D, swapchainFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
+            {{}, image, vk::ImageViewType::e2D, swapchainFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}}
+        );
         swapchainImages.push_back({image, imageView.get(), swapchainFormat, swapchainExtent});
         swapchainImageViews.push_back(std::move(imageView));
     }

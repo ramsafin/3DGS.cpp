@@ -1,8 +1,8 @@
 #ifndef VULKAN_SPLATTING_SWAPCHAIN_H
 #define VULKAN_SPLATTING_SWAPCHAIN_H
 
-#include "VulkanContext.hpp"
 #include "RenderImageView.hpp"
+#include "VulkanContext.hpp"
 #include "Window.hpp"
 
 #include <memory>

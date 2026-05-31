@@ -30,12 +30,20 @@ TEST(PassSizing, ComputesPrefixSumIterationsWithIntegerMath) {
 TEST(PassSizing, ComputesRadixSortDispatchWorkgroups) {
     EXPECT_EQ(vkgs::render::radixSortWorkgroupCount(0, gpu::RadixBlocksPerWorkgroup), 0u);
     EXPECT_EQ(vkgs::render::radixSortWorkgroupCount(1, gpu::RadixBlocksPerWorkgroup), 1u);
-    EXPECT_EQ(vkgs::render::radixSortWorkgroupCount(gpu::WorkgroupSize * gpu::RadixBlocksPerWorkgroup,
-                                                    gpu::RadixBlocksPerWorkgroup),
-              1u);
-    EXPECT_EQ(vkgs::render::radixSortWorkgroupCount(gpu::WorkgroupSize * gpu::RadixBlocksPerWorkgroup + 1,
-                                                    gpu::RadixBlocksPerWorkgroup),
-              2u);
+    EXPECT_EQ(
+        vkgs::render::radixSortWorkgroupCount(
+            gpu::WorkgroupSize * gpu::RadixBlocksPerWorkgroup,
+            gpu::RadixBlocksPerWorkgroup
+        ),
+        1u
+    );
+    EXPECT_EQ(
+        vkgs::render::radixSortWorkgroupCount(
+            gpu::WorkgroupSize * gpu::RadixBlocksPerWorkgroup + 1,
+            gpu::RadixBlocksPerWorkgroup
+        ),
+        2u
+    );
     EXPECT_THROW(vkgs::render::radixSortWorkgroupCount(1, 0), std::runtime_error);
 }
 
@@ -44,7 +52,6 @@ TEST(PassSizing, RejectsOverflow) {
     EXPECT_THROW(vkgs::render::bytesFor(max, 2, "test bytes"), std::overflow_error);
     EXPECT_THROW(vkgs::render::sortCapacity(std::numeric_limits<uint32_t>::max(), 2), std::overflow_error);
 
-    const auto tooManyElements = (static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1) *
-                                 gpu::WorkgroupSize;
+    const auto tooManyElements = (static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1) * gpu::WorkgroupSize;
     EXPECT_THROW(vkgs::render::workgroupCount(tooManyElements), std::overflow_error);
 }

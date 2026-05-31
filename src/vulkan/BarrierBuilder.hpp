@@ -14,19 +14,29 @@ class BarrierBuilder {
   public:
     BarrierBuilder& queueFamilyIndex(uint32_t queueFamilyIndex);
 
-    BarrierBuilder& addBufferBarrier(const std::shared_ptr<Buffer>& buffer, vk::AccessFlags sourceAccess,
-                                     vk::AccessFlags destinationAccess, uint32_t sourceQueueFamily,
-                                     uint32_t destinationQueueFamily);
+    BarrierBuilder& addBufferBarrier(
+        const std::shared_ptr<Buffer>& buffer,
+        vk::AccessFlags sourceAccess,
+        vk::AccessFlags destinationAccess,
+        uint32_t sourceQueueFamily,
+        uint32_t destinationQueueFamily
+    );
 
-    BarrierBuilder& addBufferBarrier(const std::shared_ptr<Buffer>& buffer, vk::AccessFlags sourceAccess,
-                                     vk::AccessFlags destinationAccess);
+    BarrierBuilder& addBufferBarrier(
+        const std::shared_ptr<Buffer>& buffer,
+        vk::AccessFlags sourceAccess,
+        vk::AccessFlags destinationAccess
+    );
 
     BarrierBuilder& sourceQueueFamilyIndex(uint32_t queueFamilyIndex);
 
     BarrierBuilder& destinationQueueFamilyIndex(uint32_t queueFamilyIndex);
 
-    void build(vk::CommandBuffer commandBuffer, vk::PipelineStageFlags sourceStage,
-               vk::PipelineStageFlags destinationStage) const;
+    void build(
+        vk::CommandBuffer commandBuffer,
+        vk::PipelineStageFlags sourceStage,
+        vk::PipelineStageFlags destinationStage
+    ) const;
 
   private:
     std::vector<vk::BufferMemoryBarrier> barriers;

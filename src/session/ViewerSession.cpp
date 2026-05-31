@@ -8,8 +8,8 @@
 namespace vkgs::session {
 namespace {
 
-render::RendererConfiguration toRendererConfiguration(viewer::ViewerConfig configuration,
-                                                      std::shared_ptr<Window> window) {
+render::RendererConfiguration
+toRendererConfiguration(viewer::ViewerConfig configuration, std::shared_ptr<Window> window) {
     render::RendererConfiguration result;
     result.scene = std::move(configuration.scene);
     result.width = configuration.extent.width;

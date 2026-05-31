@@ -13,7 +13,7 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "FETCH_CONTENT_QUIET": "ON",
+        "FETCHCONTENT_QUIET": "ON",
         "VKGS_VERBOSE_CONFIGURE": "ON"
       }
     },
@@ -69,9 +69,33 @@
       }
     },
     {
+      "name": "windows-msvc-tooling-debug",
+      "displayName": "Windows MSVC Tooling Debug",
+      "inherits": "windows-msvc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VKGS_BUILD_TESTS": "ON"
+      }
+    },
+    {
       "name": "ohos-arm64-base",
       "hidden": true,
       "inherits": "base",
+      "condition": {
+        "type": "allOf",
+        "conditions": [
+          {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Windows"
+          },
+          {
+            "type": "notEquals",
+            "lhs": "$env{OHOS_SDK_NATIVE}",
+            "rhs": ""
+          }
+        ]
+      },
       "toolchainFile": "$env{OHOS_SDK_NATIVE}/build/cmake/ohos.toolchain.cmake",
       "cacheVariables": {
         "CMAKE_MAKE_PROGRAM": "$env{OHOS_SDK_NATIVE}/build-tools/cmake/bin/ninja.exe",
@@ -119,6 +143,10 @@
       "configurePreset": "windows-msvc-offscreen-release"
     },
     {
+      "name": "windows-msvc-tooling-debug",
+      "configurePreset": "windows-msvc-tooling-debug"
+    },
+    {
       "name": "ohos-arm64-core-debug",
       "configurePreset": "ohos-arm64-core-debug",
       "targets": [
@@ -137,6 +165,13 @@
     {
       "name": "windows-msvc-offscreen-debug",
       "configurePreset": "windows-msvc-offscreen-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "windows-msvc-tooling-debug",
+      "configurePreset": "windows-msvc-tooling-debug",
       "output": {
         "outputOnFailure": true
       }

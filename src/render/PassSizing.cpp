@@ -23,9 +23,10 @@ uint32_t tileCountY(uint32_t height) {
 }
 
 uint32_t workgroupCount(uint64_t elementCount) {
-    return vkgs::core::checkedNarrowToUint32(elementCount / gpu::WorkgroupSize +
-                                                 (elementCount % gpu::WorkgroupSize != 0),
-                                             "Compute workgroup count");
+    return vkgs::core::checkedNarrowToUint32(
+        elementCount / gpu::WorkgroupSize + (elementCount % gpu::WorkgroupSize != 0),
+        "Compute workgroup count"
+    );
 }
 
 uint32_t prefixSumIterations(uint64_t elementCount) {
@@ -52,17 +53,24 @@ uint64_t bytesFor(uint64_t count, uint64_t elementSize, std::string_view context
 
 uint32_t sortCapacity(uint64_t vertexCount, uint32_t multiplier) {
     return vkgs::core::checkedNarrowToUint32(
-        vkgs::core::checkedMultiply(vertexCount, multiplier, "Sort element capacity"), "Sort element capacity");
+        vkgs::core::checkedMultiply(vertexCount, multiplier, "Sort element capacity"),
+        "Sort element capacity"
+    );
 }
 
 uint64_t sortHistogramBytes(uint32_t workgroupCount) {
-    return bytesFor(bytesFor(workgroupCount, gpu::RadixSortBins, "Sort histogram entry count"), sizeof(uint32_t),
-                    "Sort histogram buffer size");
+    return bytesFor(
+        bytesFor(workgroupCount, gpu::RadixSortBins, "Sort histogram entry count"),
+        sizeof(uint32_t),
+        "Sort histogram buffer size"
+    );
 }
 
 uint64_t tileBoundaryBytes(uint32_t width, uint32_t height) {
     const auto tileCount = vkgs::core::checkedNarrowToUint32(
-        vkgs::core::checkedMultiply(tileCountX(width), tileCountY(height), "Tile count"), "Tile count");
+        vkgs::core::checkedMultiply(tileCountX(width), tileCountY(height), "Tile count"),
+        "Tile count"
+    );
     return bytesFor(tileCount, 2 * sizeof(uint32_t), "Tile boundary buffer size");
 }
 

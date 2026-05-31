@@ -11,9 +11,12 @@
 #include "vulkan/pipelines/ComputePipeline.hpp"
 
 #include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
+#include <vector>
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
 #include "vulkan/ImguiManager.hpp"
@@ -51,7 +54,15 @@ class Renderer {
 
     std::vector<uint8_t> readPixels() const;
 
-    void setCameraPose(float px, float py, float pz, float qw, float qx, float qy, float qz);
+    void setCameraPose(
+        float positionX,
+        float positionY,
+        float positionZ,
+        float rotationW,
+        float rotationX,
+        float rotationY,
+        float rotationZ
+    );
 
     void setCameraProjection(float fovDegrees, float nearPlane, float farPlane);
 
@@ -112,7 +123,7 @@ class Renderer {
     vk::UniqueCommandBuffer preprocessCommandBuffer;
     vk::UniqueCommandBuffer renderCommandBuffer;
 
-    uint32_t currentImageIndex;
+    uint32_t currentImageIndex = 0;
 
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     std::vector<vk::UniqueSemaphore> renderFinishedSemaphores;

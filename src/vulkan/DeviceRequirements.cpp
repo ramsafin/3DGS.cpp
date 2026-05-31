@@ -4,8 +4,8 @@
 
 namespace vkgs::vulkan {
 
-QueueSelection selectQueueFamilies(std::span<const QueueFamilyCapabilities> queueFamilies,
-                                   const DeviceRequirements& requirements) {
+QueueSelection
+selectQueueFamilies(std::span<const QueueFamilyCapabilities> queueFamilies, const DeviceRequirements& requirements) {
     QueueSelection selection;
 
     if (requirements.unifiedGraphicsComputeTimestampQueue) {
@@ -42,8 +42,8 @@ QueueSelection selectQueueFamilies(std::span<const QueueFamilyCapabilities> queu
     return selection;
 }
 
-std::vector<std::string> getUnsuitabilityReasons(const DeviceRequirements& requirements,
-                                                 const VulkanDeviceCapabilities& capabilities) {
+std::vector<std::string>
+getUnsuitabilityReasons(const DeviceRequirements& requirements, const VulkanDeviceCapabilities& capabilities) {
     std::vector<std::string> reasons;
     if (capabilities.apiVersion < requirements.apiVersion) {
         reasons.push_back("Vulkan 1.2 is required");

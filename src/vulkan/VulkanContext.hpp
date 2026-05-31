@@ -21,10 +21,17 @@ class VulkanContext {
     // agreement (VKGS-026).
     static constexpr uint32_t kTimestampQueryCount = 20;
 
-    enum class RadixSortMode { FastSubgroup32, Portable };
+    enum class RadixSortMode {
+        FastSubgroup32,
+        Portable
+    };
 
     struct Queue {
-        enum Type { GRAPHICS, COMPUTE, PRESENT };
+        enum Type {
+            GRAPHICS,
+            COMPUTE,
+            PRESENT
+        };
 
         std::set<Type> types;
         uint32_t queueFamily;
@@ -32,8 +39,11 @@ class VulkanContext {
         vk::Queue queue;
     };
 
-    VulkanContext(const std::vector<std::string>& instance_extensions,
-                  const std::vector<std::string>& device_extensions, bool validation_layers_enabled);
+    VulkanContext(
+        const std::vector<std::string>& instance_extensions,
+        const std::vector<std::string>& device_extensions,
+        bool validation_layers_enabled
+    );
 
     VulkanContext(const VulkanContext&) = delete;
 
@@ -47,19 +57,25 @@ class VulkanContext {
 
     bool isDeviceSuitable(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface = std::nullopt);
 
-    std::vector<std::string> getDeviceUnsuitabilityReasons(vk::PhysicalDevice device,
-                                                           std::optional<vk::SurfaceKHR> surface = std::nullopt) const;
+    std::vector<std::string> getDeviceUnsuitabilityReasons(
+        vk::PhysicalDevice device,
+        std::optional<vk::SurfaceKHR> surface = std::nullopt
+    ) const;
 
-    void selectPhysicalDevice(std::optional<uint8_t> id = std::nullopt,
-                              std::optional<vk::SurfaceKHR> surface = std::nullopt);
+    void selectPhysicalDevice(
+        std::optional<uint8_t> id = std::nullopt,
+        std::optional<vk::SurfaceKHR> surface = std::nullopt
+    );
 
     VulkanContext::QueueFamilyIndices findQueueFamilies();
 
     void createQueryPool();
 
-    void createLogicalDevice(vk::PhysicalDeviceFeatures deviceFeatures,
-                             vk::PhysicalDeviceVulkan11Features deviceFeatures11,
-                             vk::PhysicalDeviceVulkan12Features deviceFeatures12);
+    void createLogicalDevice(
+        vk::PhysicalDeviceFeatures deviceFeatures,
+        vk::PhysicalDeviceVulkan11Features deviceFeatures11,
+        vk::PhysicalDeviceVulkan12Features deviceFeatures12
+    );
 
     void createDescriptorPool(uint8_t framesInFlight);
 
@@ -107,8 +123,8 @@ class VulkanContext {
 
     [[nodiscard]] vkgs::vulkan::DeviceRequirements getDeviceRequirements(bool requirePresentation) const;
 
-    [[nodiscard]] vkgs::vulkan::VulkanDeviceCapabilities inspectDeviceCapabilities(
-        vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const;
+    [[nodiscard]] vkgs::vulkan::VulkanDeviceCapabilities
+    inspectDeviceCapabilities(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const;
 
     vk::CommandPool getOneTimePool(uint32_t queueFamily);
 };

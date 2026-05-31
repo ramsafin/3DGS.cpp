@@ -1,13 +1,38 @@
 set(VKGS_HOST_TOOL_HINTS)
+set(VKGS_HOST_VULKAN_SDK_ROOTS)
 if(WIN32)
+    if(DEFINED ENV{VULKAN_SDK} AND NOT "$ENV{VULKAN_SDK}" STREQUAL "")
+        list(APPEND VKGS_HOST_VULKAN_SDK_ROOTS "$ENV{VULKAN_SDK}")
+    endif()
+
+    file(GLOB VKGS_DISCOVERED_VULKAN_SDK_ROOTS LIST_DIRECTORIES true
+        "C:/VulkanSDK/*"
+    )
+    list(SORT VKGS_DISCOVERED_VULKAN_SDK_ROOTS COMPARE NATURAL ORDER DESCENDING)
+    list(APPEND VKGS_HOST_VULKAN_SDK_ROOTS ${VKGS_DISCOVERED_VULKAN_SDK_ROOTS})
+    list(REMOVE_DUPLICATES VKGS_HOST_VULKAN_SDK_ROOTS)
+
     file(GLOB VKGS_HOST_PYTHON_HINTS LIST_DIRECTORIES true
         "$ENV{LOCALAPPDATA}/Programs/Python/Python*"
     )
-    file(GLOB VKGS_HOST_VULKAN_SDK_HINTS LIST_DIRECTORIES true
-        "C:/VulkanSDK/*/Bin"
-        "C:/VulkanSDK/*/bin"
-    )
-    list(APPEND VKGS_HOST_TOOL_HINTS ${VKGS_HOST_VULKAN_SDK_HINTS})
+
+    foreach(sdk_root IN LISTS VKGS_HOST_VULKAN_SDK_ROOTS)
+        if(EXISTS "${sdk_root}/Bin")
+            list(APPEND VKGS_HOST_TOOL_HINTS "${sdk_root}/Bin")
+        endif()
+        if(EXISTS "${sdk_root}/bin")
+            list(APPEND VKGS_HOST_TOOL_HINTS "${sdk_root}/bin")
+        endif()
+
+        if(CMAKE_SYSTEM_NAME STREQUAL "Windows"
+            AND NOT Vulkan_INCLUDE_DIR
+            AND EXISTS "${sdk_root}/Include"
+            AND EXISTS "${sdk_root}/Lib/vulkan-1.lib"
+        )
+            set(Vulkan_INCLUDE_DIR "${sdk_root}/Include" CACHE PATH "Vulkan include directory" FORCE)
+            set(Vulkan_LIBRARY "${sdk_root}/Lib/vulkan-1.lib" CACHE FILEPATH "Vulkan loader library" FORCE)
+        endif()
+    endforeach()
 endif()
 
 find_program(VKGS_HOST_PYTHON_EXECUTABLE

@@ -3,6 +3,7 @@
 
 #include "Types.hpp"
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <optional>

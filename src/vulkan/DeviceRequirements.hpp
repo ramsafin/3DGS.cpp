@@ -50,11 +50,11 @@ struct VulkanDeviceCapabilities {
     std::vector<QueueFamilyCapabilities> queueFamilies;
 };
 
-[[nodiscard]] QueueSelection selectQueueFamilies(std::span<const QueueFamilyCapabilities> queueFamilies,
-                                                 const DeviceRequirements& requirements);
+[[nodiscard]] QueueSelection
+selectQueueFamilies(std::span<const QueueFamilyCapabilities> queueFamilies, const DeviceRequirements& requirements);
 
-[[nodiscard]] std::vector<std::string> getUnsuitabilityReasons(const DeviceRequirements& requirements,
-                                                               const VulkanDeviceCapabilities& capabilities);
+[[nodiscard]] std::vector<std::string>
+getUnsuitabilityReasons(const DeviceRequirements& requirements, const VulkanDeviceCapabilities& capabilities);
 
 } // namespace vkgs::vulkan
 

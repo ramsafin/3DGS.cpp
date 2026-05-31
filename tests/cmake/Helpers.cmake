@@ -20,6 +20,7 @@ function(vkgs_add_test name)
     endif()
 
     add_executable(${name} ${ARGN})
+    vkgs_configure_executable(${name})
     target_include_directories(${name} PRIVATE ${VKGS_TEST_INCLUDE_DIRS})
     target_compile_definitions(${name} PRIVATE
         ${VKGS_TEST_COMPILE_DEFINITIONS}
