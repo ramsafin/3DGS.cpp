@@ -1,9 +1,10 @@
 #include "args.hxx"
 #include "spdlog/spdlog.h"
 
-#include <3dgs/3dgs.h>
+#include <3dgs/Viewer.h>
 #include <filesystem>
 #include <iostream>
+#include <utility>
 
 int main(int argc, char** argv) {
     spdlog::set_pattern("[%H:%M:%S] [%^%L%$] %v");
@@ -41,7 +42,7 @@ int main(int argc, char** argv) {
         spdlog::set_level(spdlog::level::debug);
     }
 
-    VulkanSplatting::RendererConfiguration config{};
+    vkgs::viewer::ViewerConfig config{};
     config.scene = args::get(scenePath);
 
     // check that the scene file exists
@@ -71,16 +72,15 @@ int main(int argc, char** argv) {
 
     auto width = widthFlag ? args::get(widthFlag) : 1280;
     auto height = heightFlag ? args::get(heightFlag) : 720;
-    config.width = width;
-    config.height = height;
+    config.extent = {width, height};
 
-    config.window = VulkanSplatting::createGlfwWindow("Vulkan Splatting", width, height);
+    auto window = vkgs::viewer::makeGlfwWindow("Vulkan Splatting", width, height);
 
 #ifndef DEBUG
     try {
 #endif
-        auto renderer = VulkanSplatting(config);
-        renderer.start();
+        auto renderer = vkgs::viewer::Viewer(config, std::move(window));
+        renderer.run();
 #ifndef DEBUG
     } catch (const std::exception& e) {
         spdlog::critical(e.what());

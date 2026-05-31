@@ -38,15 +38,17 @@ GUIManager::GUIManager() {
     textMetricsMap = std::make_shared<std::unordered_map<std::string, float>>();
 }
 
+GUIManager::~GUIManager() {
+    if (ImPlot::GetCurrentContext() != nullptr) {
+        ImPlot::DestroyContext();
+    }
+}
+
 void GUIManager::init() {
     ImPlot::CreateContext();
 }
 
 void GUIManager::buildGui() {
-    if (mouseCapture) {
-        ImGui::BeginDisabled(true);
-    }
-
     ImGui::SetNextWindowSize(ImVec2(400, 250), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
     ImGui::Begin("Performance");
@@ -71,8 +73,6 @@ void GUIManager::buildGui() {
     ImGui::SliderFloat("History", &history, 1, 30, "%.1f s");
     ImGui::End();
 
-    // always auto resize
-
     bool popen = true;
     ImGui::SetNextWindowPos(ImVec2(10, 270), ImGuiCond_FirstUseEver);
     ImGui::Begin("Metrics", &popen, ImGuiWindowFlags_AlwaysAutoResize);
@@ -86,16 +86,32 @@ void GUIManager::buildGui() {
 
     ImGui::SetNextWindowPos(ImVec2(10, 310), ImGuiCond_FirstUseEver);
     ImGui::Begin("Controls", &popen, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("WASD: move");
+    ImGui::Text("MMB drag: orbit");
+    ImGui::Text("RMB drag: pan");
+    ImGui::Text("Scroll: dolly");
+    ImGui::Text("WASD: fly");
     ImGui::Text("Space: up");
     ImGui::Text("Shift: down");
-    ImGui::Text("Left click: capture mouse");
-    ImGui::Text("ESC: release mouse");
-    ImGui::Text("Mouse captured: %s", mouseCapture ? "true" : "false");
+    ImGui::Text("F: frame scene");
+    ImGui::Text("R: reset camera");
+    ImGui::Text("U: rotate view 180 degrees");
+    ImGui::Text("View rotated 180: %s", viewRotated180 ? "true" : "false");
+    ImGui::Separator();
+    ImGui::Text("Position: %.3f, %.3f, %.3f", cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    ImGui::Text("Rotation quat [w,x,y,z]: %.4f, %.4f, %.4f, %.4f", cameraRotation.w, cameraRotation.x,
+                cameraRotation.y, cameraRotation.z);
     ImGui::End();
 
-    if (mouseCapture) {
-        ImGui::EndDisabled();
+    if (!wantCaptureKeyboard()) {
+        if (ImGui::IsKeyPressed(ImGuiKey_U, false)) {
+            frameRotationToggleRequested = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_F, false)) {
+            frameSceneRequested = true;
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_R, false)) {
+            resetCameraRequested = true;
+        }
     }
 }
 

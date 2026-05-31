@@ -1,12 +1,13 @@
 #ifndef VULKAN_SPLATTING_DESCRIPTORSET_H
 #define VULKAN_SPLATTING_DESCRIPTORSET_H
 
-#include "Buffer.h"
-#include "Swapchain.h"
 #include "VulkanContext.h"
+#include "RenderImageView.h"
 
+#include <cstddef>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 class Buffer;
 
@@ -20,8 +21,6 @@ class DescriptorSet : public std::enable_shared_from_this<DescriptorSet> {
         std::shared_ptr<Buffer> buffer;
         vk::DescriptorBufferInfo bufferInfo;
 
-        // image info
-        std::shared_ptr<Image> image;
         vk::DescriptorImageInfo imageInfo;
     };
 
@@ -35,7 +34,7 @@ class DescriptorSet : public std::enable_shared_from_this<DescriptorSet> {
     vk::DescriptorSet getDescriptorSet(uint8_t currentFrame, uint8_t option) const;
 
     void bindImageToDescriptorSet(uint32_t i, vk::DescriptorType descriptor, vk::ShaderStageFlagBits stage,
-                                  std::shared_ptr<Image> image);
+                                  const vkgs::vulkan::RenderImageView& image);
 
     vk::UniqueDescriptorSetLayout descriptorSetLayout;
 

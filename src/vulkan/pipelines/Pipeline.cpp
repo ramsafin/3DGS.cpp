@@ -1,9 +1,13 @@
 #include "Pipeline.h"
 
+#include <stdexcept>
 #include <utility>
 
 uint32_t Pipeline::DescriptorOption::get(size_t index) const {
     if (multiple) {
+        if (index >= values.size()) {
+            throw std::runtime_error("Descriptor option index out of range");
+        }
         return values[index];
     } else {
         return value;

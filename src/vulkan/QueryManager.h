@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+double timestampTicksToMilliseconds(uint64_t ticks, float timestampPeriodNanoseconds);
+
 class QueryManager {
   public:
     uint32_t registerQuery(const std::string& name);

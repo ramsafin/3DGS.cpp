@@ -29,10 +29,10 @@ OffscreenRenderTarget::OffscreenRenderTarget(std::shared_ptr<VulkanContext> cont
     }
     image = vk::Image(vkImage);
 
-    auto imageView = this->context->device->createImageViewUnique(
+    imageView = this->context->device->createImageViewUnique(
         {{}, image, vk::ImageViewType::e2D, format, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
 
-    images.push_back(std::make_shared<Image>(image, std::move(imageView), format, extent, std::nullopt));
+    images.push_back({image, imageView.get(), format, extent});
 
     auto commandBuffer = this->context->beginOneTimeCommandBuffer();
     vk::ImageMemoryBarrier imageMemoryBarrier{};
@@ -51,6 +51,7 @@ OffscreenRenderTarget::OffscreenRenderTarget(std::shared_ptr<VulkanContext> cont
 
 OffscreenRenderTarget::~OffscreenRenderTarget() {
     images.clear();
+    imageView.reset();
     if (image && allocation != nullptr) {
         vmaDestroyImage(context->allocator, static_cast<VkImage>(image), allocation);
     }

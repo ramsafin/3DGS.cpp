@@ -38,9 +38,10 @@
 #extension GL_KHR_shader_subgroup_ballot: enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
 #extension GL_EXT_shader_atomic_int64 : enable
+#include "../shared_constants.glsl"
 
-#define WORKGROUP_SIZE 256// assert WORKGROUP_SIZE >= RADIX_SORT_BINS
-#define RADIX_SORT_BINS 256U
+#define WORKGROUP_SIZE VKGS_WORKGROUP_SIZE// assert WORKGROUP_SIZE >= RADIX_SORT_BINS
+#define RADIX_SORT_BINS VKGS_RADIX_SORT_BINS
 #define SUBGROUP_SIZE 32// 32 NVIDIA; 64 AMD
 
 #define BITS 64// sorting uint32_t

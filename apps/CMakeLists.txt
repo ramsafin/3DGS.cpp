@@ -1,5 +1,7 @@
-if(VKGS_RENDER_MODE STREQUAL "ONSCREEN")
+if(VKGS_BUILD_VIEWER)
     add_subdirectory(viewer)
-else()
+endif()
+
+if(VKGS_BUILD_OFFSCREEN_APP)
     add_subdirectory(offscreen)
 endif()

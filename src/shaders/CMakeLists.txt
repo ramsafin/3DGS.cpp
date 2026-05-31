@@ -7,6 +7,7 @@ set(VKGS_SHADER_SOURCES
     tile_boundary.comp
     sort/hist.comp
     sort/sort.comp
+    sort/sort_portable.comp
 )
 
 set(VKGS_SHADER_INCLUDE_FILES
@@ -16,6 +17,7 @@ set(VKGS_SHADER_INCLUDE_FILES
 
 set(VKGS_SHADER_SPV_DIR "${CMAKE_CURRENT_BINARY_DIR}/spv")
 set(VKGS_SHADER_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/3dgs")
+set(VKGS_SHADER_GENERATED_DIR "${VKGS_SHADER_GENERATED_DIR}" PARENT_SCOPE)
 set(VKGS_SHADER_HEADER "${VKGS_SHADER_GENERATED_DIR}/shaders.h")
 set(VKGS_SHADER_EMBED_SCRIPT "${PROJECT_SOURCE_DIR}/tools/embed_shaders.py")
 
@@ -66,7 +68,7 @@ endforeach()
 add_custom_command(
     OUTPUT "${VKGS_SHADER_HEADER}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${VKGS_SHADER_GENERATED_DIR}"
-    COMMAND "${Python3_EXECUTABLE}" "${VKGS_SHADER_EMBED_SCRIPT}"
+    COMMAND "${VKGS_HOST_PYTHON_EXECUTABLE}" "${VKGS_SHADER_EMBED_SCRIPT}"
         --output "${VKGS_SHADER_HEADER}"
         ${VKGS_EMBED_ARGUMENTS}
     DEPENDS

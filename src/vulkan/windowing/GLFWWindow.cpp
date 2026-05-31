@@ -17,6 +17,9 @@ GLFWWindow::GLFWWindow(std::string name, int width, int height) {
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
+
+    glfwSetWindowUserPointer(static_cast<GLFWwindow*>(window), this);
+    glfwSetScrollCallback(static_cast<GLFWwindow*>(window), scrollCallback);
 }
 
 GLFWWindow::~GLFWWindow() {
@@ -82,6 +85,19 @@ void GLFWWindow::mouseCapture(bool capture) {
     } else {
         glfwSetInputMode(static_cast<GLFWwindow*>(window), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
+}
+
+void GLFWWindow::scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset) {
+    auto* self = static_cast<GLFWWindow*>(glfwGetWindowUserPointer(window));
+    if (self != nullptr) {
+        self->scrollDeltaY += yoffset;
+    }
+}
+
+double GLFWWindow::getScrollDelta() {
+    const double delta = scrollDeltaY;
+    scrollDeltaY = 0.0;
+    return delta;
 }
 
 bool GLFWWindow::tick() {

@@ -1,6 +1,6 @@
 # Off-screen renderer
 
-`3dgs_render` is built when configuring the project with `-DVKGS_RENDER_MODE=OFFSCREEN`.
+`3dgs_render` is built when configuring the project with `-DVKGS_BUILD_OFFSCREEN_APP=ON`.
 It reads a JSON render configuration, renders each requested camera pose into an off-screen
 Vulkan storage image, and writes dependency-free binary PPM images.
 

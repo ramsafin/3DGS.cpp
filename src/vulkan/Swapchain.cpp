@@ -108,6 +108,7 @@ void Swapchain::createSwapchainImages() {
     // Reset per-image state so recreation does not accumulate stale image views
     // and acquire semaphores (VKGS-017).
     swapchainImages.clear();
+    swapchainImageViews.clear();
     imageAvailableSemaphores.clear();
 
     auto images = context->device->getSwapchainImagesKHR(*swapchain);
@@ -115,8 +116,8 @@ void Swapchain::createSwapchainImages() {
     for (auto& image : images) {
         auto imageView = context->device->createImageViewUnique(
             {{}, image, vk::ImageViewType::e2D, swapchainFormat, {}, {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1}});
-        swapchainImages.push_back(
-            std::make_shared<Image>(image, std::move(imageView), swapchainFormat, swapchainExtent, std::nullopt));
+        swapchainImages.push_back({image, imageView.get(), swapchainFormat, swapchainExtent});
+        swapchainImageViews.push_back(std::move(imageView));
     }
 
     for (int i = 0; i < swapchainImages.size(); i++) {

@@ -4,6 +4,8 @@
 
 GUIManager::GUIManager() {}
 
+GUIManager::~GUIManager() {}
+
 void GUIManager::init() {}
 
 void GUIManager::buildGui() {}

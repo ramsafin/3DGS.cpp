@@ -3,6 +3,8 @@
 
 #include "vulkan/Window.h"
 
+struct GLFWwindow;
+
 class GLFWWindow final : public Window {
   public:
     GLFWWindow(std::string name, int width, int height);
@@ -26,6 +28,8 @@ class GLFWWindow final : public Window {
 
     void mouseCapture(bool capture) override;
 
+    double getScrollDelta() override;
+
     bool tick() override;
 
     void* window;
@@ -35,6 +39,9 @@ class GLFWWindow final : public Window {
 
     double lastX = 0.0;
     double lastY = 0.0;
+    double scrollDeltaY = 0.0;
+
+    static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 };
 
 #endif // GLFWWINDOW_H

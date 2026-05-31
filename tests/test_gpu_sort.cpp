@@ -1,5 +1,8 @@
 #include "test_support.h"
 
+#include "GpuConstants.h"
+#include "render/PassSizing.h"
+#include "render/GpuTypes.h"
 #include "shaders.h"
 #include "vulkan/Buffer.h"
 #include "vulkan/DescriptorSet.h"
@@ -12,32 +15,28 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <numeric>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 namespace {
 
-// Mirrors Renderer::RadixSortPushConstants without pulling in Renderer.h
-// (which is mode-dependent on ImGui headers).
-struct RadixSortPushConstants {
-    uint32_t g_num_elements;
-    uint32_t g_shift;
-    uint32_t g_num_workgroups;
-    uint32_t g_num_blocks_per_workgroup;
-};
-
-constexpr uint32_t kBlocksPerWorkgroup = 32;
-
+constexpr uint32_t kBlocksPerWorkgroup = gpu::RadixBlocksPerWorkgroup;
 // Runs the GPU radix sort exactly as Renderer does: eight 8-bit passes over
 // 64-bit keys, ping-ponging even/odd buffers. Returns the sorted keys and the
-// permuted payloads. Designed for element counts that fit a single workgroup.
+// permuted payloads.
 struct SortResult {
     std::vector<uint64_t> keys;
     std::vector<uint32_t> payloads;
 };
 
-SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::vector<uint64_t>& inputKeys) {
+SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::vector<uint64_t>& inputKeys,
+                      VulkanContext::RadixSortMode mode) {
+    if (inputKeys.size() > std::numeric_limits<uint32_t>::max()) {
+        throw std::runtime_error("GPU sort test input exceeds uint32_t");
+    }
     const uint32_t n = static_cast<uint32_t>(inputKeys.size());
 
     auto keyEven = Buffer::storage(context, n * sizeof(uint64_t));
@@ -45,14 +44,14 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     auto payEven = Buffer::storage(context, n * sizeof(uint32_t));
     auto payOdd = Buffer::storage(context, n * sizeof(uint32_t));
 
-    uint32_t globalInvocationSize = n / kBlocksPerWorkgroup + (n % kBlocksPerWorkgroup ? 1 : 0);
-    uint32_t numWorkgroups = (globalInvocationSize + 255) / 256;
-    auto hist = Buffer::storage(context, numWorkgroups * 256 * sizeof(uint32_t));
+    uint32_t globalInvocationSize = vkgs::render::ceilDiv(n, kBlocksPerWorkgroup);
+    uint32_t numWorkgroups = vkgs::render::ceilDiv(globalInvocationSize, gpu::WorkgroupSize);
+    auto hist = Buffer::storage(context, numWorkgroups * gpu::RadixSortBins * sizeof(uint32_t));
 
     std::vector<uint32_t> payloads(n);
     std::iota(payloads.begin(), payloads.end(), 0u);
-    keyEven->upload(inputKeys.data(), static_cast<uint32_t>(n * sizeof(uint64_t)));
-    payEven->upload(payloads.data(), static_cast<uint32_t>(n * sizeof(uint32_t)));
+    keyEven->upload(std::span(inputKeys));
+    payEven->upload(std::span(payloads));
 
     using vk::DescriptorType;
     using vk::ShaderStageFlagBits;
@@ -66,7 +65,7 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     auto histPipeline =
         std::make_shared<ComputePipeline>(context, std::make_shared<Shader>(context, "hist", SPV_HIST, SPV_HIST_len));
     histPipeline->addDescriptorSet(0, histSet);
-    histPipeline->addPushConstant(ShaderStageFlagBits::eCompute, 0, sizeof(RadixSortPushConstants));
+    histPipeline->addPushConstant(ShaderStageFlagBits::eCompute, 0, sizeof(vkgs::render::RadixSortPushConstants));
     histPipeline->build();
 
     auto sortSet = std::make_shared<DescriptorSet>(context, 1);
@@ -81,34 +80,37 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     sortSet->bindBufferToDescriptorSet(4, DescriptorType::eStorageBuffer, ShaderStageFlagBits::eCompute, hist);
     sortSet->build();
 
-    auto sortPipeline =
-        std::make_shared<ComputePipeline>(context, std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len));
+    const auto sortShader = mode == VulkanContext::RadixSortMode::FastSubgroup32
+                                ? std::make_shared<Shader>(context, "sort", SPV_SORT, SPV_SORT_len)
+                                : std::make_shared<Shader>(context, "sort_portable", SPV_SORT_PORTABLE,
+                                                           SPV_SORT_PORTABLE_len);
+    auto sortPipeline = std::make_shared<ComputePipeline>(context, sortShader);
     sortPipeline->addDescriptorSet(0, sortSet);
-    sortPipeline->addPushConstant(ShaderStageFlagBits::eCompute, 0, sizeof(RadixSortPushConstants));
+    sortPipeline->addPushConstant(ShaderStageFlagBits::eCompute, 0, sizeof(vkgs::render::RadixSortPushConstants));
     sortPipeline->build();
 
     auto cmd = context->beginOneTimeCommandBuffer();
     for (uint32_t i = 0; i < 8; ++i) {
-        uint32_t invocationSize = (n + kBlocksPerWorkgroup - 1) / kBlocksPerWorkgroup;
-        invocationSize = (invocationSize + 255) / 256;
+        uint32_t invocationSize = vkgs::render::ceilDiv(n, kBlocksPerWorkgroup);
+        invocationSize = vkgs::render::ceilDiv(invocationSize, gpu::WorkgroupSize);
 
-        RadixSortPushConstants pc{};
-        pc.g_num_elements = n;
-        pc.g_num_blocks_per_workgroup = kBlocksPerWorkgroup;
-        pc.g_shift = i * 8;
-        pc.g_num_workgroups = invocationSize;
+        vkgs::render::RadixSortPushConstants pc{};
+        pc.numElements = n;
+        pc.numBlocksPerWorkgroup = kBlocksPerWorkgroup;
+        pc.shift = i * 8;
+        pc.numWorkgroups = invocationSize;
 
         const uint32_t option = i % 2 == 0 ? 0 : 1;
 
         histPipeline->bind(cmd, 0, option);
         cmd->pushConstants(histPipeline->pipelineLayout.get(), ShaderStageFlagBits::eCompute, 0,
-                           sizeof(RadixSortPushConstants), &pc);
+                           sizeof(vkgs::render::RadixSortPushConstants), &pc);
         cmd->dispatch(invocationSize, 1, 1);
         hist->computeWriteReadBarrier(cmd.get());
 
         sortPipeline->bind(cmd, 0, option);
         cmd->pushConstants(sortPipeline->pipelineLayout.get(), ShaderStageFlagBits::eCompute, 0,
-                           sizeof(RadixSortPushConstants), &pc);
+                           sizeof(vkgs::render::RadixSortPushConstants), &pc);
         cmd->dispatch(invocationSize, 1, 1);
 
         if (option == 0) {
@@ -133,13 +135,9 @@ SortResult runGpuSort(const std::shared_ptr<VulkanContext>& context, const std::
     return result;
 }
 
-void expectSortedMatchesReference(const std::vector<uint64_t>& input) {
-    auto context = vkgs_test::makeHeadlessContext();
-    if (!context) {
-        GTEST_SKIP() << "No Vulkan device available";
-    }
-
-    auto result = runGpuSort(context, input);
+void expectSortedMatchesReference(const std::shared_ptr<VulkanContext>& context, const std::vector<uint64_t>& input,
+                                  VulkanContext::RadixSortMode mode) {
+    auto result = runGpuSort(context, input, mode);
 
     std::vector<uint64_t> reference = input;
     std::sort(reference.begin(), reference.end());
@@ -152,29 +150,50 @@ void expectSortedMatchesReference(const std::vector<uint64_t>& input) {
     }
 }
 
-TEST(GpuRadixSort, RandomKeys) {
+void exerciseMode(VulkanContext::RadixSortMode mode) {
+    auto context = vkgs_test::makeHeadlessContext();
+    if (!context) {
+        GTEST_SKIP() << "No Vulkan device available";
+    }
+    if (mode == VulkanContext::RadixSortMode::FastSubgroup32 &&
+        context->getRadixSortMode() != VulkanContext::RadixSortMode::FastSubgroup32) {
+        GTEST_SKIP() << "Selected Vulkan device does not support the fast radix path";
+    }
+
+    expectSortedMatchesReference(context, {7ull}, mode);
+
+    std::vector<uint64_t> reverse(255);
+    for (uint32_t i = 0; i < reverse.size(); ++i) {
+        reverse[i] = reverse.size() - i;
+    }
+    expectSortedMatchesReference(context, reverse, mode);
+
+    std::vector<uint64_t> duplicates(256, 7ull);
+    for (size_t i = 0; i < duplicates.size(); i += 2) {
+        duplicates[i] = 3ull;
+    }
+    expectSortedMatchesReference(context, duplicates, mode);
+
     std::mt19937_64 gen(12345);
-    std::vector<uint64_t> keys(2048);
-    for (auto& k : keys) {
+    std::vector<uint64_t> random(257);
+    for (auto& k : random) {
         k = gen();
     }
-    expectSortedMatchesReference(keys);
+    expectSortedMatchesReference(context, random, mode);
+
+    std::vector<uint64_t> growth(10000);
+    for (auto& k : growth) {
+        k = gen();
+    }
+    expectSortedMatchesReference(context, growth, mode);
 }
 
-TEST(GpuRadixSort, ReverseOrdered) {
-    std::vector<uint64_t> keys(1024);
-    for (uint32_t i = 0; i < keys.size(); ++i) {
-        keys[i] = keys.size() - i;
-    }
-    expectSortedMatchesReference(keys);
+TEST(GpuRadixSort, PortableMode) {
+    exerciseMode(VulkanContext::RadixSortMode::Portable);
 }
 
-TEST(GpuRadixSort, Duplicates) {
-    std::vector<uint64_t> keys(1024, 7ull);
-    for (size_t i = 0; i < keys.size(); i += 2) {
-        keys[i] = 3ull;
-    }
-    expectSortedMatchesReference(keys);
+TEST(GpuRadixSort, FastSubgroup32ModeWhenSupported) {
+    exerciseMode(VulkanContext::RadixSortMode::FastSubgroup32);
 }
 
 } // namespace

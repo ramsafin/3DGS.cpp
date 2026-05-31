@@ -120,3 +120,40 @@ These remain open by design:
 - `OHOS_SDK_NATIVE` is not set in the current environment, so the OHOS configure/build presets remain unverified.
 - Golden-image regression hash is recorded under the build dir (`VKGS_GOLDEN_DIR`) and is re-recordable; re-baseline intentionally if rendering output is meant to change.
 - GPU-dependent tests are device-gated and will skip cleanly on machines without a suitable Vulkan device.
+
+---
+
+## Pre-OHOS Portability Gate Update (2026-05-30)
+
+This section supersedes the earlier deferred-work notes for the build-only OHOS milestone.
+
+### Implemented
+
+- OHOS presets use the SDK Ninja at `$env{OHOS_SDK_NATIVE}/build-tools/cmake/bin/ninja.exe`.
+- Cross builds discover host Python and `glslangValidator` outside the sysroot with cache overrides and actionable failures.
+- GLM is header-only (`GLM_BUILD_LIBRARY=OFF`).
+- Vulkan-Headers `vulkan-sdk-1.4.309.0` is pinned with SHA-256 `2BC1B4127950BADC80212ABF1EDFA5C3B5032F3425EDF37255863BA7592C1969`.
+- Offscreen static core excludes `vulkan/Swapchain.cpp`.
+- Offscreen device selection requires compute only. Timestamp metrics are optional and reset on the compute queue.
+- `RadixSortMode { FastSubgroup32, Portable }` selects either the retained subgroup/shared-64-atomic path or the new portable shared-32-bit path.
+- Runtime SPIR-V loading copies bytes into aligned `uint32_t` storage and rejects empty or partial-word modules.
+- PLY loading validates the complete ordered 62-float schema, rejects counts above `UINT32_MAX`, and decodes an explicit disk record without GLM layout assumptions.
+- Buffer byte sizes and offsets use `vk::DeviceSize`, mapped copies flush/invalidate explicitly, reallocations preserve old allocations on allocation failure, descriptor backlinks are checked, and `vmaCreateAllocator` failures are reported.
+- Header-check translation units compile internal headers in isolation as part of the core target.
+- Tests cover strict PLY schema failures, face routing, truncation, one valid complete disk record, exact and partial buffer copies, overflow rejection, descriptor refresh and backlink bounds, failed realloc preservation, malformed SPIR-V, arithmetic overflow, and forced portable/fast radix modes at sizes `1`, `255`, `256`, `257`, and `10000`.
+
+### Verification Pending
+
+The source changes passed `git diff --check`, but the build matrix could not be rerun in this Codex session. The desktop sandbox blocked the installed Ninja executable outside the workspace, and the escalation request could not be granted because the session approval quota was exhausted.
+
+Run the Windows matrix and the following OHOS commands before marking this gate verified:
+
+```powershell
+$env:OHOS_SDK_NATIVE='D:\command-line-tools\sdk\default\openharmony\native'
+cmake --preset ohos-arm64-core-debug
+cmake --build --preset ohos-arm64-core-debug
+cmake --preset ohos-arm64-core-release
+cmake --build --preset ohos-arm64-core-release
+```
+
+Runtime OHOS support remains a later milestone: deploy a minimal offscreen harness, record the target capability profile, run render/readback smoke tests, and exercise the portable radix path on device.

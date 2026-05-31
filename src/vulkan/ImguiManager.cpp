@@ -6,7 +6,7 @@
 #include "windowing/GLFWWindow.h"
 
 ImguiManager::ImguiManager(std::shared_ptr<VulkanContext> context, std::shared_ptr<Swapchain> swapchain,
-                           std::shared_ptr<Window> window)
+                           std::shared_ptr<GLFWWindow> window)
     : context(context), swapchain(swapchain), window(window) {}
 
 void ImguiManager::createCommandPool() {}
@@ -111,8 +111,13 @@ void ImguiManager::init() {
     descriptorPool = context->device->createDescriptorPoolUnique(poolInfo);
 
     ImGui::CreateContext();
-    auto glfwWindow = std::reinterpret_pointer_cast<GLFWWindow>(window);
-    ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(glfwWindow->window), true);
+    ImGui_ImplGlfw_InitForVulkan(static_cast<GLFWwindow*>(window->window), true);
+    initVulkanBackend();
+
+    setStyle();
+}
+
+void ImguiManager::initVulkanBackend() {
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = context->instance.get();
     init_info.PhysicalDevice = context->physicalDevice;
@@ -130,8 +135,12 @@ void ImguiManager::init() {
     ImGui_ImplVulkan_Init(&init_info);
 
     ImGui_ImplVulkan_CreateFontsTexture();
+}
 
-    setStyle();
+void ImguiManager::onSwapchainRecreated() {
+    context->device->waitIdle();
+    ImGui_ImplVulkan_Shutdown();
+    initVulkanBackend();
 }
 
 void ImguiManager::immediateSubmit(std::function<void(VkCommandBuffer cmd)>&& function) {
@@ -160,7 +169,7 @@ void ImguiManager::draw(vk::CommandBuffer commandBuffer, uint32_t currentImageIn
     imguiFunction();
     ImGui::Render();
 
-    vk::RenderingAttachmentInfoKHR attachment_info{swapchain->swapchainImages[currentImageIndex]->imageView.get(),
+    vk::RenderingAttachmentInfoKHR attachment_info{swapchain->swapchainImages[currentImageIndex].imageView,
                                                    vk::ImageLayout::eColorAttachmentOptimal};
     vk::RenderingInfoKHR rendering_info{{}, vk::Rect2D{{0, 0}, swapchain->swapchainExtent}, 1, {}, 1, &attachment_info};
     commandBuffer.beginRenderingKHR(rendering_info);

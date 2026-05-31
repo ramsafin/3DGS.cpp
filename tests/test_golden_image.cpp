@@ -9,7 +9,7 @@
 #include <vector>
 
 #ifdef VKGS_RENDER_MODE_OFFSCREEN
-#include <3dgs/3dgs.h>
+#include <3dgs/OffscreenRenderer.h>
 
 namespace fs = std::filesystem;
 
@@ -40,19 +40,14 @@ std::string makeFixtureScene() {
 }
 
 uint64_t renderHash() {
-    VulkanSplatting::RendererConfiguration config{};
+    vkgs::OffscreenConfig config{};
     config.scene = makeFixtureScene();
-    config.width = 256;
-    config.height = 256;
+    config.extent = {256, 256};
     config.enableVulkanValidationLayers = false;
 
-    VulkanSplatting renderer(config);
-    renderer.initialize();
-    renderer.setCameraProjection(45.0f, 0.2f, 1000.0f);
-    renderer.setCameraPose(0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
-    renderer.draw();
+    vkgs::OffscreenRenderer renderer(config);
+    renderer.render({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.0f}});
     auto pixels = renderer.readPixels();
-    renderer.stop();
     return vkgs_test::fnv1a(pixels);
 }
 

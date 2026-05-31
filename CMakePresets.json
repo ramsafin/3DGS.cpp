@@ -29,7 +29,8 @@
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
-        "VKGS_BUILD_APPS": "ON"
+        "VKGS_BUILD_VIEWER": "ON",
+        "VKGS_BUILD_OFFSCREEN_APP": "ON"
       }
     },
     {
@@ -37,8 +38,7 @@
       "displayName": "Windows MSVC On-screen Debug",
       "inherits": "windows-msvc-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "VKGS_RENDER_MODE": "ONSCREEN"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
@@ -46,8 +46,7 @@
       "displayName": "Windows MSVC On-screen Release",
       "inherits": "windows-msvc-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "VKGS_RENDER_MODE": "ONSCREEN"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
@@ -56,7 +55,7 @@
       "inherits": "windows-msvc-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "VKGS_RENDER_MODE": "OFFSCREEN",
+        "VKGS_BUILD_VIEWER": "OFF",
         "VKGS_BUILD_TESTS": "ON"
       }
     },
@@ -66,7 +65,7 @@
       "inherits": "windows-msvc-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "VKGS_RENDER_MODE": "OFFSCREEN"
+        "VKGS_BUILD_VIEWER": "OFF"
       }
     },
     {
@@ -75,10 +74,11 @@
       "inherits": "base",
       "toolchainFile": "$env{OHOS_SDK_NATIVE}/build/cmake/ohos.toolchain.cmake",
       "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "$env{OHOS_SDK_NATIVE}/build-tools/cmake/bin/ninja.exe",
         "OHOS_ARCH": "arm64-v8a",
         "OHOS_STL": "c++_shared",
-        "VKGS_BUILD_APPS": "OFF",
-        "VKGS_RENDER_MODE": "OFFSCREEN"
+        "VKGS_BUILD_VIEWER": "OFF",
+        "VKGS_BUILD_OFFSCREEN_APP": "OFF"
       }
     },
     {
@@ -119,14 +119,14 @@
       "name": "ohos-arm64-core-debug",
       "configurePreset": "ohos-arm64-core-debug",
       "targets": [
-        "3dgs_cpp"
+        "3dgs_core"
       ]
     },
     {
       "name": "ohos-arm64-core-release",
       "configurePreset": "ohos-arm64-core-release",
       "targets": [
-        "3dgs_cpp"
+        "3dgs_core"
       ]
     }
   ],

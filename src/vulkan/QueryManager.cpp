@@ -1,6 +1,14 @@
 #include "QueryManager.h"
 
+#include <cmath>
 #include <stdexcept>
+
+double timestampTicksToMilliseconds(uint64_t ticks, float timestampPeriodNanoseconds) {
+    if (!std::isfinite(timestampPeriodNanoseconds) || timestampPeriodNanoseconds <= 0.0f) {
+        throw std::runtime_error("Timestamp period must be finite and positive");
+    }
+    return static_cast<double>(ticks) * static_cast<double>(timestampPeriodNanoseconds) / 1'000'000.0;
+}
 
 void QueryManager::setCapacity(uint32_t capacity) {
     std::lock_guard<std::mutex> lock(mutex);

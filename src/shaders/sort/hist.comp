@@ -34,9 +34,10 @@
 #version 460
 #extension GL_GOOGLE_include_directive: enable
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
+#include "../shared_constants.glsl"
 
-#define WORKGROUP_SIZE 256 // assert WORKGROUP_SIZE >= RADIX_SORT_BINS
-#define RADIX_SORT_BINS 256U
+#define WORKGROUP_SIZE VKGS_WORKGROUP_SIZE // assert WORKGROUP_SIZE >= RADIX_SORT_BINS
+#define RADIX_SORT_BINS VKGS_RADIX_SORT_BINS
 
 #define BITS 64
 

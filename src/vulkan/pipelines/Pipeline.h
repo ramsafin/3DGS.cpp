@@ -4,8 +4,11 @@
 #include "vulkan/DescriptorSet.h"
 #include "vulkan/VulkanContext.h"
 
+#include <cstddef>
 #include <map>
 #include <memory>
+#include <utility>
+#include <vector>
 
 class Pipeline {
   public:

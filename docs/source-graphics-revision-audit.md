@@ -632,3 +632,17 @@ The following choices are sound and should not be mechanically rewritten:
 ## Audit Completion Note
 
 This audit intentionally changes only `docs/source-graphics-revision-audit.md`. Existing repository modifications were preserved.
+
+## 10. Pre-OHOS Portability Gate Progress
+
+Implementation update: 2026-05-30.
+
+The pre-OHOS static-core portability gate has now been implemented in the working tree:
+
+- OHOS presets select the SDK-bundled Ninja, host Python and `glslangValidator` are discovered outside the cross sysroot, GLM library compilation is disabled, Vulkan-Headers `vulkan-sdk-1.4.309.0` is hash-pinned, and offscreen core builds exclude `Swapchain.cpp`.
+- Offscreen suitability requires only compute; timestamp queries are optional and reset through compute; subgroup-32 and shared 64-bit atomics select a fast radix path instead of rejecting otherwise suitable devices.
+- A portable radix shader uses shared 32-bit bitsets and barrier-based prefix calculation without subgroup-size or shared-64-atomic assumptions.
+- SPIR-V loading, fixed-schema PLY decoding, Vulkan buffer byte ranges, mapped-memory coherency, descriptor bounds, VMA allocator creation, header include hygiene, and projected-vertex naming have been hardened.
+- Focused tests were added for strict PLY schemas, truncation, buffer ranges and realloc safety, descriptor bounds, malformed SPIR-V, checked arithmetic, and both radix shader modes.
+
+Verification is not yet updated: the Codex desktop sandbox rejected execution of the installed Ninja outside the workspace after the escalation quota was exhausted. The Windows and OHOS build matrix must be rerun before this gate is marked verified.

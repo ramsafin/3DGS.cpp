@@ -1,8 +1,7 @@
 #ifndef VULKANCONTEXT_H
 #define VULKANCONTEXT_H
 
-#define FRAMES_IN_FLIGHT 1
-
+#include "DeviceRequirements.h"
 #include "vk_mem_alloc.h"
 
 #include <cstdint>
@@ -13,37 +12,16 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-struct Image {
-    vk::Image image;
-    vk::UniqueImageView imageView;
-    vk::Format format;
-    vk::Extent2D extent;
-    std::optional<vk::UniqueFramebuffer> framebuffer;
-
-    Image(const vk::Image& image, vk::UniqueImageView&& image_view, vk::Format format, const vk::Extent2D& extent,
-          std::optional<vk::UniqueFramebuffer>&& framebuffer = std::nullopt)
-        : image(image), imageView(std::move(image_view)), format(format), extent(extent),
-          framebuffer(std::move(framebuffer)) {}
-};
-
 class VulkanContext {
-  private:
-    struct QueueFamilyIndices {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> computeFamily;
-        std::optional<uint32_t> presentFamily;
-
-        bool isComplete(bool requirePresent) const {
-            return graphicsFamily.has_value() && computeFamily.has_value() &&
-                   (!requirePresent || presentFamily.has_value());
-        }
-    };
-
   public:
+    using QueueFamilyIndices = vkgs::vulkan::QueueSelection;
+
     // Number of timestamp queries the timestamp pool can hold. Centralized so
     // the pool size, the reset ranges, and the QueryManager id allocator stay in
     // agreement (VKGS-026).
     static constexpr uint32_t kTimestampQueryCount = 20;
+
+    enum class RadixSortMode { FastSubgroup32, Portable };
 
     struct Queue {
         enum Type { GRAPHICS, COMPUTE, PRESENT };
@@ -85,6 +63,14 @@ class VulkanContext {
 
     void createDescriptorPool(uint8_t framesInFlight);
 
+    [[nodiscard]] bool supportsTimestampQueries() const {
+        return timestampQueriesSupported;
+    }
+
+    [[nodiscard]] RadixSortMode getRadixSortMode() const {
+        return radixSortMode;
+    }
+
     vk::UniqueCommandBuffer beginOneTimeCommandBuffer(Queue::Type queue = Queue::COMPUTE);
 
     void endOneTimeCommandBuffer(vk::UniqueCommandBuffer&& commandBuffer, Queue::Type queue);
@@ -112,8 +98,17 @@ class VulkanContext {
     // (VKGS-001); using a single graphics-family pool is invalid when graphics
     // and compute families differ.
     std::unordered_map<uint32_t, vk::UniqueCommandPool> oneTimeCommandPools;
+    bool timestampQueriesSupported = false;
+    RadixSortMode radixSortMode = RadixSortMode::Portable;
 
     void setupVma();
+
+    void updateSelectedDeviceCapabilities();
+
+    [[nodiscard]] vkgs::vulkan::DeviceRequirements getDeviceRequirements(bool requirePresentation) const;
+
+    [[nodiscard]] vkgs::vulkan::VulkanDeviceCapabilities inspectDeviceCapabilities(
+        vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const;
 
     vk::CommandPool getOneTimePool(uint32_t queueFamily);
 };

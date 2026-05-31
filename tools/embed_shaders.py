@@ -37,6 +37,8 @@ def render(entries: list[tuple[str, Path]]) -> bytes:
         seen.add(symbol)
 
         payload = path.read_bytes()
+        if not payload or len(payload) % 4:
+            raise ValueError(f"{path}: SPIR-V payload size must be a non-zero multiple of 4")
         # SPIR-V is consumed as 32-bit words (reinterpret_cast<const uint32_t*>),
         # so the byte array must be 4-byte aligned (VKGS-010).
         lines.append(f"alignas(4) static constexpr unsigned char {symbol}[] = {{")

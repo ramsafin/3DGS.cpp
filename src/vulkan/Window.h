@@ -29,15 +29,15 @@ class Window {
         return {false, false, false, false, false, false, false};
     }
 
+    virtual double getScrollDelta() {
+        return 0.0;
+    }
+
     virtual void mouseCapture(bool capture) {}
 
     virtual bool tick() {
         return false;
     };
-
-    virtual void logTranslation(float x, float y) {};
-
-    virtual void logMovement(float x, float y) {};
 
     virtual ~Window() = default;
 };

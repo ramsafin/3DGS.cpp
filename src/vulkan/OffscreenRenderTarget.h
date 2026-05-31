@@ -2,6 +2,7 @@
 #define OFFSCREEN_RENDER_TARGET_H
 
 #include "VulkanContext.h"
+#include "RenderImageView.h"
 
 #include <memory>
 #include <vector>
@@ -20,11 +21,12 @@ class OffscreenRenderTarget {
 
     vk::Extent2D extent;
     vk::Format format;
-    std::vector<std::shared_ptr<Image>> images;
+    std::vector<vkgs::vulkan::RenderImageView> images;
 
   private:
     std::shared_ptr<VulkanContext> context;
     vk::Image image;
+    vk::UniqueImageView imageView;
     VmaAllocation allocation = nullptr;
 };
 

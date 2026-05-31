@@ -2,6 +2,7 @@
 #define VULKAN_SPLATTING_SWAPCHAIN_H
 
 #include "VulkanContext.h"
+#include "RenderImageView.h"
 #include "Window.h"
 
 #include <memory>
@@ -12,7 +13,8 @@ class Swapchain {
 
     vk::UniqueSwapchainKHR swapchain;
     vk::Extent2D swapchainExtent;
-    std::vector<std::shared_ptr<Image>> swapchainImages;
+    std::vector<vk::UniqueImageView> swapchainImageViews;
+    std::vector<vkgs::vulkan::RenderImageView> swapchainImages;
     std::vector<vk::UniqueSemaphore> imageAvailableSemaphores;
     vk::SurfaceFormatKHR surfaceFormat;
     vk::Format swapchainFormat;

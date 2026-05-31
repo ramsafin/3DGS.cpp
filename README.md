@@ -3,13 +3,13 @@
 3DGS.cpp is a high-performance, cross-platform implementation
 of [Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) built entirely on
 the [Vulkan API](https://www.khronos.org/vulkan/) and compute pipelines. The full rasterization
-pipeline — covariance precomputation, preprocessing, radix sorting, tile binning, and tiled
-rendering — runs as a sequence of compute shaders, with no dependency on a graphics rasterizer.
+pipeline - covariance precomputation, preprocessing, radix sorting, tile binning, and tiled
+rendering - runs as a sequence of compute shaders, with no dependency on a graphics rasterizer.
 
-The renderer ships in two flavors driven by the same core library:
+The renderer ships as a core library plus optional frontends:
 
-- **On-screen viewer** (`3dgs_viewer`) — an interactive GLFW/ImGui window for exploring a scene.
-- **Off-screen renderer** (`3dgs_render`) — a headless tool that renders camera poses from a JSON
+- **On-screen viewer** (`3dgs_viewer`) - an interactive GLFW/ImGui window for exploring a scene.
+- **Off-screen renderer** (`3dgs_render`) - a headless tool that renders camera poses from a JSON
   config into Vulkan storage images and writes PPM files.
 
 ## Status
@@ -19,9 +19,10 @@ recently been modernized:
 
 - Single target-based CMake project with `CMakePresets.json` and Ninja single-config builds.
 - Archive-pinned, hash-verified dependencies via `FetchContent`.
-- Deterministic, incremental SPIR-V embedding through a host Python script (replacing the legacy
-  compiled `embedfile` helper).
+- Deterministic, incremental SPIR-V embedding through a host Python script.
 - Stable `compile_commands.json` plus `clangd`, `clang-format`, and `clang-tidy` configuration.
+- Namespaced public PImpl headers for off-screen rendering and the bundled viewer frontend.
+- Core-library install/export rules with a `3dgsConfig.cmake` package.
 - An `arm64-v8a` OHOS/HarmonyOS core-library cross-compilation preset (build environment required;
   see [Roadmap](#roadmap)).
 
@@ -29,7 +30,7 @@ recently been modernized:
 
 | Tool | Notes |
 | --- | --- |
-| **CMake ≥ 3.28** | Presets and modern FetchContent. |
+| **CMake >= 3.28** | Presets and modern FetchContent. |
 | **Ninja** | Generator used by all presets. |
 | **C++20 compiler** | MSVC (`cl`, VS 2019 16.11+) is the primary Windows path; LLVM/Clang also works. |
 | **Vulkan SDK** | Provides headers, the loader, and `glslangValidator`. Export `VULKAN_SDK`. |
@@ -57,19 +58,19 @@ On Windows, launch a **Visual Studio Developer PowerShell** so `cl`, Ninja, and 
 on `PATH`, and make sure `VULKAN_SDK` and a Python 3 interpreter are available. Then:
 
 ```powershell
-# Configure + build the interactive viewer (Debug)
+# Configure + build the interactive viewer and off-screen app (Debug)
 cmake --preset windows-msvc-onscreen-debug
 cmake --build --preset windows-msvc-onscreen-debug
 ```
 
 Available configure/build presets:
 
-| Preset | Mode | Build type | Output |
+| Preset | Components | Build type | Primary output |
 | --- | --- | --- | --- |
-| `windows-msvc-onscreen-debug` | On-screen | Debug | `3dgs_viewer.exe` |
-| `windows-msvc-onscreen-release` | On-screen | Release | `3dgs_viewer.exe` |
-| `windows-msvc-offscreen-debug` | Off-screen | Debug | `3dgs_render.exe` |
-| `windows-msvc-offscreen-release` | Off-screen | Release | `3dgs_render.exe` |
+| `windows-msvc-onscreen-debug` | Viewer + off-screen app | Debug | `3dgs_viewer.exe`, `3dgs_render.exe` |
+| `windows-msvc-onscreen-release` | Viewer + off-screen app | Release | `3dgs_viewer.exe`, `3dgs_render.exe` |
+| `windows-msvc-offscreen-debug` | Core + off-screen app + tests | Debug | `3dgs_render.exe` |
+| `windows-msvc-offscreen-release` | Core + off-screen app | Release | `3dgs_render.exe` |
 
 Binaries are written to `build/<preset>/apps/viewer/` or `build/<preset>/apps/offscreen/`.
 
@@ -86,24 +87,24 @@ ctest --preset windows-msvc-offscreen-debug
 ### Building without presets
 
 ```bash
-cmake -S . -B build/onscreen -G Ninja -DVKGS_RENDER_MODE=ONSCREEN -DCMAKE_BUILD_TYPE=Release
-cmake --build build/onscreen
+cmake -S . -B build/default -G Ninja -DVKGS_BUILD_VIEWER=ON -DVKGS_BUILD_OFFSCREEN_APP=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build/default
 ```
 
-### Render modes
+### Build Components
 
-The build targets either **on-screen** or **off-screen** rendering via `VKGS_RENDER_MODE`:
+The viewer library/application and off-screen rendering application can be selected independently:
 
-- `ONSCREEN` (default) — builds the GLFW window/swapchain viewer and the desktop ImGui/ImPlot UI.
-- `OFFSCREEN` — builds the headless `3dgs_render` tool with no windowing or desktop UI dependencies.
+- `VKGS_BUILD_VIEWER` (default `ON`) builds GLFW window/swapchain support and the desktop ImGui/ImPlot viewer.
+- `VKGS_BUILD_OFFSCREEN_APP` (default `ON`) builds the headless `3dgs_render` tool.
+- `VKGS_BUILD_TESTS` (default `OFF`) builds the CPU and Vulkan integration tests.
 
-Additional options: `VKGS_BUILD_APPS` (default `ON`) toggles building the applications, and
-`VKGS_VERBOSE_CONFIGURE` (default `ON`) prints the resolved compiler, dependencies, and toolchain
-during configuration.
+`VKGS_VERBOSE_CONFIGURE` (default `ON`) prints the resolved compiler, dependencies, and toolchain during
+configuration.
 
 ## Scenes
 
-The renderer consumes **trained Gaussian Splatting** PLY files — binary point clouds whose vertices
+The renderer consumes **trained Gaussian Splatting** PLY files - binary point clouds whose vertices
 carry the 62 float properties produced by training (`x/y/z`, `nx/ny/nz`, `f_dc_*`, `f_rest_*`,
 `opacity`, `scale_*`, `rot_*`). A raw COLMAP/Open3D `input.ply` (just positions, normals, and colors)
 is **not** compatible and will fail to load.
@@ -130,7 +131,7 @@ file (not `input.ply`):
 
 ### On-screen viewer
 
-```
+```text
   ./3dgs_viewer {OPTIONS} [scene]
 
     Vulkan Splatting
@@ -152,12 +153,12 @@ file (not `input.ply`):
 
 ### Off-screen renderer
 
-```
+```text
   ./3dgs_render --config <render.json> [--output <dir>] [--device <id>] [--validation] [--verbose]
 ```
 
 `3dgs_render` reads camera poses from a JSON config, renders each into a Vulkan storage image, and
-writes PPM files. A starting point lives at `apps/offscreen/examples/simple_render.json` — set its
+writes PPM files. A starting point lives at `apps/offscreen/examples/simple_render.json` - set its
 `scene` field to a trained `point_cloud.ply` (see [Scenes](#scenes)); see `apps/offscreen/README.md`
 for the full config format.
 
@@ -166,37 +167,42 @@ for the full config format.
 Presets export `compile_commands.json` and the active database is mirrored to
 `build/compile_commands.json` for `clangd`. The repository ships `.clang-format`, `.clang-tidy`,
 `.clangd`, and `.vscode/` templates (configure/build tasks and `lldb` launch configurations).
-Only one preset owns the stable compilation database at a time — refresh it after switching render
-mode or compiler.
+Only one preset owns the stable compilation database at a time - refresh it after switching build
+components or compiler.
 
 ## Project Structure
 
 ```text
 3DGS.cpp/
-  CMakeLists.txt          # Root project
-  CMakePresets.json       # Windows + OHOS presets
-  cmake/Dependencies.cmake# Archive-pinned, hash-verified FetchContent
-  include/3dgs/3dgs.h      # Public API header
-  src/                     # Core renderer library (3dgs_cpp)
-    vulkan/                # Vulkan context, buffers, pipelines, windowing
-    shaders/               # Compute shaders (.comp) + common.glsl
+  CMakeLists.txt           # Root project
+  CMakePresets.json        # Windows + OHOS presets
+  cmake/Dependencies.cmake # Archive-pinned, hash-verified FetchContent
+  include/3dgs/            # Public PImpl API headers
+  src/                     # Core renderer, scene, session, and Vulkan code
+    core/                  # Shared CPU utilities
+    render/                # GPU ABI types and render sizing helpers
+    scene/                 # CPU PLY ingestion and GPU scene upload
+    session/               # Off-screen and viewer session adapters
+    vulkan/                # Vulkan context, buffers, descriptors, pipelines, windowing
+    shaders/               # Compute shaders (.comp) + common GLSL
   apps/
-    viewer/                # 3dgs_viewer (on-screen)
-    offscreen/             # 3dgs_render (off-screen)
+    viewer/                # 3dgs_viewer
+    offscreen/             # 3dgs_render
   tools/embed_shaders.py   # Host-side SPIR-V -> C++ header embedder
 ```
 
 ## Roadmap
 
-- **Public window adapter API** — replace the current internals-exposing `Window` boundary with a
-  minimal public `WindowAdapter` so the on-screen path can be consumed without leaking renderer
-  internals.
-- **OHOS/HarmonyOS support** — the `ohos-arm64-core-*` presets currently target a static core
+- **Compute pass extraction** - split the remaining monolithic `Renderer` internals into explicit
+  covariance, preprocess, radix-sort, and tile-render modules coordinated by a pipeline object.
+- **Public window adapter API** - expand the current bundled GLFW adapter into a custom surface/input
+  adapter contract without leaking renderer internals.
+- **OHOS/HarmonyOS support** - the `ohos-arm64-core-*` presets currently target a static core
   library only (requires `OHOS_SDK_NATIVE`). A runnable OHOS application still needs native surface
   creation, module packaging, deployment, and remote-debug wiring. GPUs with a subgroup size other
   than 32 also need a revised or specialized radix-sort shader.
-- **Install/packaging rules** — export targets and a `3dgsConfig.cmake` once the public API
-  stabilizes.
+- **Package polish** - export optional viewer targets and keep the external-consumer package test
+  green as the public API stabilizes.
 
 ## License
 
@@ -213,4 +219,3 @@ This project uses several third-party libraries:
 - **implot**: [MIT License](https://opensource.org/licenses/MIT).
 - **glfw**: [zlib/libpng license](https://www.glfw.org/license.html).
 - **nlohmann/json**: [MIT License](https://opensource.org/licenses/MIT).
-```

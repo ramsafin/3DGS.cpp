@@ -2,6 +2,7 @@
 #define SHADER_H
 #include "VulkanContext.h"
 
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,7 +27,7 @@ class Shader {
     const std::string filename;
     std::shared_ptr<VulkanContext> context;
     const unsigned char* data = nullptr;
-    size_t size;
+    size_t size = 0;
 };
 
 #endif // SHADER_H

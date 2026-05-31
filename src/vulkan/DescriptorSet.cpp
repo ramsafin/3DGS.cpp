@@ -1,5 +1,10 @@
 #include "DescriptorSet.h"
 
+#include "Buffer.h"
+
+#include <stdexcept>
+#include <string>
+
 void DescriptorSet::bindBufferToDescriptorSet(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlagBits stage,
                                               std::shared_ptr<Buffer> buffer) {
     const vk::DescriptorSetLayoutBinding layoutBinding{binding, type, 1, stage};
@@ -85,20 +90,15 @@ vk::DescriptorSet DescriptorSet::getDescriptorSet(uint8_t currentFrame, uint8_t 
 }
 
 void DescriptorSet::bindImageToDescriptorSet(uint32_t i, vk::DescriptorType descriptor, vk::ShaderStageFlagBits stage,
-                                             std::shared_ptr<Image> image) {
+                                             const vkgs::vulkan::RenderImageView& image) {
     const vk::DescriptorSetLayoutBinding layoutBinding{i, descriptor, 1, stage};
     const auto& bindingVector = bindings[i];
     if (!bindingVector.empty() && bindingVector[bindingVector.size() - 1].layoutBinding != layoutBinding) {
         throw std::runtime_error("Binding " + std::to_string(i) + " already exists with different layout binding");
     }
 
-    bindings[i].push_back(
-        DescriptorBinding{descriptor,
-                          layoutBinding,
-                          nullptr,
-                          {},
-                          image,
-                          vk::DescriptorImageInfo({}, image->imageView.get(), vk::ImageLayout::eGeneral)});
+    bindings[i].push_back(DescriptorBinding{
+        descriptor, layoutBinding, nullptr, {}, vk::DescriptorImageInfo({}, image.imageView, vk::ImageLayout::eGeneral)});
 }
 
 DescriptorSet::DescriptorSet(const std::shared_ptr<VulkanContext>& _context, uint8_t framesInFlight)
