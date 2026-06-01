@@ -25,6 +25,12 @@ class VulkanContext {
         Portable
     };
 
+    enum class SortKeyMode {
+        UInt64FastSubgroup32,
+        UInt64Portable,
+        UInt32PairPortable
+    };
+
     struct Queue {
         enum Type {
             GRAPHICS,
@@ -86,6 +92,14 @@ class VulkanContext {
         return radixSortMode;
     }
 
+    [[nodiscard]] SortKeyMode getSortKeyMode() const {
+        return sortKeyMode;
+    }
+
+    [[nodiscard]] bool usesShaderInt64SortKeys() const {
+        return sortKeyMode != SortKeyMode::UInt32PairPortable;
+    }
+
     vk::UniqueCommandBuffer beginOneTimeCommandBuffer(Queue::Type queue = Queue::COMPUTE);
 
     void endOneTimeCommandBuffer(vk::UniqueCommandBuffer&& commandBuffer, Queue::Type queue);
@@ -115,6 +129,7 @@ class VulkanContext {
     std::unordered_map<uint32_t, vk::UniqueCommandPool> oneTimeCommandPools;
     bool timestampQueriesSupported = false;
     RadixSortMode radixSortMode = RadixSortMode::Portable;
+    SortKeyMode sortKeyMode = SortKeyMode::UInt64Portable;
 
     void setupVma();
 

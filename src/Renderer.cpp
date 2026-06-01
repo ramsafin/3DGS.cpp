@@ -215,8 +215,8 @@ void Renderer::initializeVulkan() {
     vk::PhysicalDeviceVulkan11Features pdf11{};
     vk::PhysicalDeviceVulkan12Features pdf12{};
     pdf.shaderStorageImageWriteWithoutFormat = true;
-    pdf.shaderInt64 = true;
-    pdf12.shaderSharedInt64Atomics = context->getRadixSortMode() == VulkanContext::RadixSortMode::FastSubgroup32;
+    pdf.shaderInt64 = context->usesShaderInt64SortKeys();
+    pdf12.shaderSharedInt64Atomics = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt64FastSubgroup32;
 
     context->createLogicalDevice(pdf, pdf11, pdf12);
     context->createDescriptorPool(1);
@@ -430,20 +430,39 @@ void Renderer::createPrefixSumPipeline() {
 void Renderer::createRadixSortPipeline() {
     spdlog::debug("Creating radix sort pipeline");
     const auto capacity = sizing::sortCapacity(scene->getNumVertices(), sortBufferSizeMultiplier);
+    const bool useUint32PairSort = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt32PairPortable;
+    const auto sortKeyElementSize = useUint32PairSort ? sizeof(uint32_t) : sizeof(uint64_t);
+
     sortKBufferEven = Buffer::storage(
         context,
-        sizing::bytesFor(capacity, sizeof(uint64_t), "Even sort key buffer size"),
+        sizing::bytesFor(capacity, sortKeyElementSize, "Even sort key buffer size"),
         false,
         0,
         "sortKBufferEven"
     );
     sortKBufferOdd = Buffer::storage(
         context,
-        sizing::bytesFor(capacity, sizeof(uint64_t), "Odd sort key buffer size"),
+        sizing::bytesFor(capacity, sortKeyElementSize, "Odd sort key buffer size"),
         false,
         0,
         "sortKBufferOdd"
     );
+    if (useUint32PairSort) {
+        sortDepthKBufferEven = Buffer::storage(
+            context,
+            sizing::bytesFor(capacity, sizeof(uint32_t), "Even sort depth key buffer size"),
+            false,
+            0,
+            "sortDepthKBufferEven"
+        );
+        sortDepthKBufferOdd = Buffer::storage(
+            context,
+            sizing::bytesFor(capacity, sizeof(uint32_t), "Odd sort depth key buffer size"),
+            false,
+            0,
+            "sortDepthKBufferOdd"
+        );
+    }
     sortVBufferEven = Buffer::storage(
         context,
         sizing::bytesFor(capacity, sizeof(uint32_t), "Even sort payload buffer size"),
@@ -462,6 +481,123 @@ void Renderer::createRadixSortPipeline() {
     auto numWorkgroups = sizing::radixSortWorkgroupCount(capacity, numRadixSortBlocksPerWorkgroup);
 
     sortHistBuffer = Buffer::storage(context, sizing::sortHistogramBytes(numWorkgroups), false);
+
+    if (useUint32PairSort) {
+        sortHistPipeline = std::make_shared<ComputePipeline>(
+            context,
+            std::make_shared<Shader>(context, "hist_u32", SPV_HIST_U32, SPV_HIST_U32_len)
+        );
+        sortPipeline = std::make_shared<ComputePipeline>(
+            context,
+            std::make_shared<Shader>(
+                context,
+                "sort_pair_u32_portable",
+                SPV_SORT_PAIR_U32_PORTABLE,
+                SPV_SORT_PAIR_U32_PORTABLE_len
+            )
+        );
+
+        auto descriptorSet = std::make_shared<DescriptorSet>(context, vkgs::render::kFramesInFlight);
+        descriptorSet->bindBufferToDescriptorSet(
+            0,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortDepthKBufferEven
+        );
+        descriptorSet->bindBufferToDescriptorSet(
+            0,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortDepthKBufferOdd
+        );
+        descriptorSet->bindBufferToDescriptorSet(
+            0,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortKBufferEven
+        );
+        descriptorSet->bindBufferToDescriptorSet(
+            0,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortKBufferOdd
+        );
+        descriptorSet->bindBufferToDescriptorSet(
+            1,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortHistBuffer
+        );
+        descriptorSet->build();
+        sortHistPipeline->addDescriptorSet(0, descriptorSet);
+        sortHistPipeline
+            ->addPushConstant(vk::ShaderStageFlagBits::eCompute, 0, sizeof(vkgs::render::RadixSortPushConstants));
+        sortHistPipeline->build();
+
+        descriptorSet = std::make_shared<DescriptorSet>(context, vkgs::render::kFramesInFlight);
+        const std::array<std::shared_ptr<Buffer>, 4> activeIn =
+            {sortDepthKBufferEven, sortDepthKBufferOdd, sortKBufferEven, sortKBufferOdd};
+        const std::array<std::shared_ptr<Buffer>, 4> activeOut =
+            {sortDepthKBufferOdd, sortDepthKBufferEven, sortKBufferOdd, sortKBufferEven};
+        const std::array<std::shared_ptr<Buffer>, 4> companionIn =
+            {sortKBufferEven, sortKBufferOdd, sortDepthKBufferEven, sortDepthKBufferOdd};
+        const std::array<std::shared_ptr<Buffer>, 4> companionOut =
+            {sortKBufferOdd, sortKBufferEven, sortDepthKBufferOdd, sortDepthKBufferEven};
+        const std::array<std::shared_ptr<Buffer>, 4> payloadIn =
+            {sortVBufferEven, sortVBufferOdd, sortVBufferEven, sortVBufferOdd};
+        const std::array<std::shared_ptr<Buffer>, 4> payloadOut =
+            {sortVBufferOdd, sortVBufferEven, sortVBufferOdd, sortVBufferEven};
+        for (size_t option = 0; option < activeIn.size(); ++option) {
+            descriptorSet->bindBufferToDescriptorSet(
+                0,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                activeIn[option]
+            );
+            descriptorSet->bindBufferToDescriptorSet(
+                1,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                activeOut[option]
+            );
+            descriptorSet->bindBufferToDescriptorSet(
+                2,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                companionIn[option]
+            );
+            descriptorSet->bindBufferToDescriptorSet(
+                3,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                companionOut[option]
+            );
+            descriptorSet->bindBufferToDescriptorSet(
+                4,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                payloadIn[option]
+            );
+            descriptorSet->bindBufferToDescriptorSet(
+                5,
+                vk::DescriptorType::eStorageBuffer,
+                vk::ShaderStageFlagBits::eCompute,
+                payloadOut[option]
+            );
+        }
+        descriptorSet->bindBufferToDescriptorSet(
+            6,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortHistBuffer
+        );
+        descriptorSet->build();
+        sortPipeline->addDescriptorSet(0, descriptorSet);
+        sortPipeline
+            ->addPushConstant(vk::ShaderStageFlagBits::eCompute, 0, sizeof(vkgs::render::RadixSortPushConstants));
+        sortPipeline->build();
+        return;
+    }
 
     sortHistPipeline =
         std::make_shared<ComputePipeline>(context, std::make_shared<Shader>(context, "hist", SPV_HIST, SPV_HIST_len));
@@ -565,9 +701,17 @@ void Renderer::createRadixSortPipeline() {
 
 void Renderer::createPreprocessSortPipeline() {
     spdlog::debug("Creating preprocess sort pipeline");
+    const bool useUint32PairSort = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt32PairPortable;
     preprocessSortPipeline = std::make_shared<ComputePipeline>(
         context,
-        std::make_shared<Shader>(context, "preprocess_sort", SPV_PREPROCESS_SORT, SPV_PREPROCESS_SORT_len)
+        useUint32PairSort
+            ? std::make_shared<Shader>(
+                  context,
+                  "preprocess_sort_u32",
+                  SPV_PREPROCESS_SORT_U32,
+                  SPV_PREPROCESS_SORT_U32_len
+              )
+            : std::make_shared<Shader>(context, "preprocess_sort", SPV_PREPROCESS_SORT, SPV_PREPROCESS_SORT_len)
     );
     auto descriptorSet = std::make_shared<DescriptorSet>(context, vkgs::render::kFramesInFlight);
     descriptorSet->bindBufferToDescriptorSet(
@@ -594,12 +738,27 @@ void Renderer::createPreprocessSortPipeline() {
         vk::ShaderStageFlagBits::eCompute,
         sortKBufferEven
     );
-    descriptorSet->bindBufferToDescriptorSet(
-        3,
-        vk::DescriptorType::eStorageBuffer,
-        vk::ShaderStageFlagBits::eCompute,
-        sortVBufferEven
-    );
+    if (useUint32PairSort) {
+        descriptorSet->bindBufferToDescriptorSet(
+            3,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortDepthKBufferEven
+        );
+        descriptorSet->bindBufferToDescriptorSet(
+            4,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortVBufferEven
+        );
+    } else {
+        descriptorSet->bindBufferToDescriptorSet(
+            3,
+            vk::DescriptorType::eStorageBuffer,
+            vk::ShaderStageFlagBits::eCompute,
+            sortVBufferEven
+        );
+    }
     descriptorSet->build();
 
     preprocessSortPipeline->addDescriptorSet(0, descriptorSet);
@@ -612,9 +771,12 @@ void Renderer::createTileBoundaryPipeline() {
     auto [width, height] = getRenderExtent();
     tileBoundaryBuffer = Buffer::storage(context, sizing::tileBoundaryBytes(width, height), false);
 
+    const bool useUint32PairSort = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt32PairPortable;
     tileBoundaryPipeline = std::make_shared<ComputePipeline>(
         context,
-        std::make_shared<Shader>(context, "tile_boundary", SPV_TILE_BOUNDARY, SPV_TILE_BOUNDARY_len)
+        useUint32PairSort
+            ? std::make_shared<Shader>(context, "tile_boundary_u32", SPV_TILE_BOUNDARY_U32, SPV_TILE_BOUNDARY_U32_len)
+            : std::make_shared<Shader>(context, "tile_boundary", SPV_TILE_BOUNDARY, SPV_TILE_BOUNDARY_len)
     );
     auto descriptorSet = std::make_shared<DescriptorSet>(context, vkgs::render::kFramesInFlight);
     descriptorSet->bindBufferToDescriptorSet(
@@ -623,9 +785,6 @@ void Renderer::createTileBoundaryPipeline() {
         vk::ShaderStageFlagBits::eCompute,
         sortKBufferEven
     );
-    // descriptorSet->bindBufferToDescriptorSet(0, vk::DescriptorType::eStorageBuffer,
-    // vk::ShaderStageFlagBits::eCompute,
-    //                                          sortKBufferOdd);
     descriptorSet->bindBufferToDescriptorSet(
         1,
         vk::DescriptorType::eStorageBuffer,
@@ -963,8 +1122,18 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
             capacity = sizing::sortCapacity(scene->getNumVertices(), sortBufferSizeMultiplier);
         }
         spdlog::info("Reallocating sort buffers. {} -> {}", old, sortBufferSizeMultiplier);
-        sortKBufferEven->realloc(sizing::bytesFor(capacity, sizeof(uint64_t), "Even sort key buffer size"));
-        sortKBufferOdd->realloc(sizing::bytesFor(capacity, sizeof(uint64_t), "Odd sort key buffer size"));
+        const bool useUint32PairSort = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt32PairPortable;
+        const auto sortKeyElementSize = useUint32PairSort ? sizeof(uint32_t) : sizeof(uint64_t);
+        sortKBufferEven->realloc(sizing::bytesFor(capacity, sortKeyElementSize, "Even sort key buffer size"));
+        sortKBufferOdd->realloc(sizing::bytesFor(capacity, sortKeyElementSize, "Odd sort key buffer size"));
+        if (useUint32PairSort) {
+            sortDepthKBufferEven->realloc(
+                sizing::bytesFor(capacity, sizeof(uint32_t), "Even sort depth key buffer size")
+            );
+            sortDepthKBufferOdd->realloc(
+                sizing::bytesFor(capacity, sizeof(uint32_t), "Odd sort depth key buffer size")
+            );
+        }
         sortVBufferEven->realloc(sizing::bytesFor(capacity, sizeof(uint32_t), "Even sort payload buffer size"));
         sortVBufferOdd->realloc(sizing::bytesFor(capacity, sizeof(uint32_t), "Odd sort payload buffer size"));
 
@@ -981,6 +1150,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
 
     vertexAttributeBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 
+    const bool useUint32PairSort = context->getSortKeyMode() == VulkanContext::SortKeyMode::UInt32PairPortable;
     const auto iters = sizing::prefixSumIterations(scene->getNumVertices());
     const auto numGroups = sizing::workgroupCount(scene->getNumVertices());
     preprocessSortPipeline->bind(renderCommandBuffer, 0, iters % 2 == 0 ? 0 : 1);
@@ -996,18 +1166,20 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
     renderCommandBuffer->dispatch(numGroups, 1, 1);
 
     sortKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+    sortVBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+    if (useUint32PairSort) {
+        sortDepthKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+    }
     writeTimestamp(renderCommandBuffer.get(), "preprocess_sort_end");
 
-    assert(numInstances <= capacity);
-    writeTimestamp(renderCommandBuffer.get(), "sort_start");
-    for (auto i = 0; i < 8; i++) {
-        sortHistPipeline->bind(renderCommandBuffer, 0, i % 2 == 0 ? 0 : 1);
+    const auto dispatchRadixPass = [&](uint32_t descriptorOption, uint32_t shift) {
+        sortHistPipeline->bind(renderCommandBuffer, 0, descriptorOption);
         const auto invocationSize = sizing::radixSortWorkgroupCount(numInstances, numRadixSortBlocksPerWorkgroup);
 
         vkgs::render::RadixSortPushConstants pushConstants{};
         pushConstants.numElements = numInstances;
         pushConstants.numBlocksPerWorkgroup = numRadixSortBlocksPerWorkgroup;
-        pushConstants.shift = i * 8;
+        pushConstants.shift = shift;
         pushConstants.numWorkgroups = invocationSize;
         renderCommandBuffer->pushConstants(
             sortHistPipeline->pipelineLayout.get(),
@@ -1021,7 +1193,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
 
         sortHistBuffer->computeWriteReadBarrier(renderCommandBuffer.get());
 
-        sortPipeline->bind(renderCommandBuffer, 0, i % 2 == 0 ? 0 : 1);
+        sortPipeline->bind(renderCommandBuffer, 0, descriptorOption);
         renderCommandBuffer->pushConstants(
             sortPipeline->pipelineLayout.get(),
             vk::ShaderStageFlagBits::eCompute,
@@ -1030,13 +1202,40 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
             &pushConstants
         );
         renderCommandBuffer->dispatch(invocationSize, 1, 1);
+    };
 
-        if (i % 2 == 0) {
-            sortKBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
-            sortVBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
-        } else {
-            sortKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
-            sortVBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+    assert(numInstances <= capacity);
+    writeTimestamp(renderCommandBuffer.get(), "sort_start");
+    if (useUint32PairSort) {
+        // The no-shaderInt64 path stores the sort key as two 32-bit words and
+        // performs a stable LSD radix sort: depth first, then tile id. Four
+        // 8-bit passes sort each word; the even buffers are final after each
+        // four-pass group, matching the render and tile-boundary descriptors.
+        for (uint32_t pass = 0; pass < 8; ++pass) {
+            const uint32_t descriptorOption = pass < 4 ? pass % 2 : 2 + (pass % 2);
+            dispatchRadixPass(descriptorOption, (pass % 4) * 8);
+
+            if (pass % 2 == 0) {
+                sortKBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortDepthKBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortVBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
+            } else {
+                sortKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortDepthKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortVBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+            }
+        }
+    } else {
+        for (uint32_t pass = 0; pass < 8; ++pass) {
+            dispatchRadixPass(pass % 2, pass * 8);
+
+            if (pass % 2 == 0) {
+                sortKBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortVBufferOdd->computeWriteReadBarrier(renderCommandBuffer.get());
+            } else {
+                sortKBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+                sortVBufferEven->computeWriteReadBarrier(renderCommandBuffer.get());
+            }
         }
     }
     writeTimestamp(renderCommandBuffer.get(), "sort_end");
@@ -1052,7 +1251,7 @@ bool Renderer::recordRenderCommandBuffer(uint32_t currentFrame) {
             vk::PipelineStageFlagBits::eComputeShader
         );
 
-    // Since we have 64 bit keys, the sort result is always in the even buffer
+    // Both the 64-bit and uint32-pair radix paths finish in the even tile-key buffer.
     tileBoundaryPipeline->bind(renderCommandBuffer, 0, 0);
     writeTimestamp(renderCommandBuffer.get(), "tile_boundary_start");
     renderCommandBuffer->pushConstants(

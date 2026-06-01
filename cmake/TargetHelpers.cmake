@@ -48,6 +48,7 @@ function(vkgs_configure_library target mode)
             VULKAN_HPP_TYPESAFE_CONVERSION=1
             VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
             VKGS_RENDER_MODE_${mode}
+            $<$<BOOL:${VKGS_ENABLE_SHADER_DEBUG_PRINTF}>:VKGS_ENABLE_SHADER_DEBUG_PRINTF>
             $<$<CONFIG:Debug>:DEBUG>
             $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
     )
@@ -117,6 +118,7 @@ function(vkgs_add_header_check_target target mode)
         VULKAN_HPP_TYPESAFE_CONVERSION=1
         VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
         VKGS_RENDER_MODE_${mode}
+        $<$<BOOL:${VKGS_ENABLE_SHADER_DEBUG_PRINTF}>:VKGS_ENABLE_SHADER_DEBUG_PRINTF>
         $<$<CONFIG:Debug>:DEBUG>
         $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
     )

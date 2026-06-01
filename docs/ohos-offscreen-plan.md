@@ -2,12 +2,12 @@
 
 ## Current failure
 
-The observed OHOS run reaches Vulkan instance creation and enumerates the `Maleoon 910`, but rejects it before creating a logical device because the Debug build requires `VK_KHR_shader_non_semantic_info` and the renderer requires `shaderInt64`.
+The observed OHOS run reaches Vulkan instance creation and enumerates the `Maleoon 910`. The capability probe shows the device satisfies the hard off-screen Vulkan requirements, but lacks `VK_KHR_shader_non_semantic_info` and `shaderInt64`. The renderer now makes shader debug printf opt-in and can select an integrated no-`shaderInt64` off-screen sort path at runtime.
 
 Those two diagnostics have different meanings:
 
-- `VK_KHR_shader_non_semantic_info` is currently requested for every `DEBUG` build. This is useful for debug shader metadata, but it should not decide whether a production off-screen renderer can run on OHOS.
-- `shaderInt64` is a true renderer requirement today. The existing sort-key path stores a 64-bit key composed from tile index and depth bits, and the Vulkan feature request enables `shaderInt64` before logical-device creation.
+- `VK_KHR_shader_non_semantic_info` should only be requested when shader debug printf is explicitly enabled. It should not decide whether a production off-screen renderer can run on OHOS.
+- Devices with `shaderInt64` can use the existing 64-bit key path composed from tile index and depth bits; devices without it use the portable `uint32` pair sort-key mode.
 
 ## Why start with a separate GPU capability executable
 
@@ -57,14 +57,7 @@ This is the lowest-risk renderer change because it only affects diagnostics/debu
 
 ### 2. `shaderInt64` is missing, but storage images, compute queues, and workgroup size are OK
 
-Plan a portable sort-key path that avoids 64-bit shader integers. The current shaders build 64-bit keys from `(tileIndex << 32) | depthBits`; this needs `shaderInt64` even in the portable radix-sort path. Options to evaluate:
-
-- split the key into two `uint32_t` buffers/fields (`tileIndex`, `depthBits`) and sort lexicographically,
-- perform two stable 32-bit sorts: depth within tile and then tile, or tile then depth depending on the existing sort direction requirements,
-- pack tile and quantized depth into a 32-bit key only if output dimensions and quality requirements allow it,
-- move key expansion or final ordering to CPU only as a diagnostic fallback, not as the desired renderer path.
-
-This is the likely main OHOS renderer task if the Maleoon 910 truly lacks `shaderInt64`.
+Use the portable sort-key path that avoids 64-bit shader integers. The renderer stores tile id and depth as separate `uint32_t` buffers, performs four stable 8-bit passes over depth, then four stable 8-bit passes over tile id. Because the radix pass is stable, the second four-pass group preserves depth ordering within each tile while producing the tile-key order expected by boundary generation.
 
 ### 3. `shaderStorageImageWriteWithoutFormat` or `R8G8B8A8_UNORM` storage+transfer support is missing
 
@@ -81,10 +74,10 @@ Keep rendering functional and disable timing queries. The current off-screen req
 ## Suggested implementation sequence
 
 1. Build and deploy `vkgs_caps` for OHOS; collect logs from the target device.
-2. Remove the debug-only hard dependency on `VK_KHR_shader_non_semantic_info` if the probe confirms it is absent.
-3. Re-run `3dgs_render`; if it still fails only on `shaderInt64`, implement a no-`shaderInt64` key/sort path behind a runtime capability switch.
-4. Add tests for device-requirement classification and sort-key packing/splitting.
-5. Re-enable the OHOS off-screen app preset once the required runtime path is selected automatically.
+2. Keep `VK_KHR_shader_non_semantic_info` gated behind `VKGS_ENABLE_SHADER_DEBUG_PRINTF` so production OHOS runs do not require the debug-only extension.
+3. Re-run `3dgs_render`; devices without `shaderInt64` should select `uint32 pair portable`, allocate the additional 32-bit depth-key buffers, and dispatch the depth-then-tile radix passes automatically.
+4. Validate output ordering and image parity on OHOS scenes, then tune the portable sort workgroup sizing if needed.
+5. Re-enable or broaden the OHOS off-screen app preset once target-device validation is complete.
 
 ## Open questions for the capability probe
 
@@ -93,3 +86,13 @@ Keep rendering functional and disable timing queries. The current off-screen req
 - What subgroup size and subgroup operations are reported for compute?
 - Does the device expose `shaderSharedInt64Atomics` even if `shaderInt64` is absent? If not, the fast sort path is impossible, but a 32-bit portable path may still be viable.
 - Which queue families support compute, graphics, and timestamps?
+
+## Milestone C `uint32` pair path
+
+The no-`shaderInt64` shader modules and renderer integration now cover the portable `uint32 pair` path:
+
+- `preprocess_sort_u32.comp` writes separate `uint` tile keys, depth keys, and payloads.
+- `sort/hist_u32.comp` builds radix histograms over `uint` active keys.
+- `sort/sort_pair_u32_portable.comp` stably scatters one `uint` active key while carrying a companion `uint` key and payload.
+- `tile_boundary_u32.comp` derives tile boundaries from sorted `uint` tile keys directly.
+- `Renderer` allocates even/odd tile-key, depth-key, and payload buffers for the selected mode, binds mode-specific descriptor alternatives, dispatches depth-key passes followed by tile-key passes, and feeds the final even payload/tile-key buffers into render and boundary generation.

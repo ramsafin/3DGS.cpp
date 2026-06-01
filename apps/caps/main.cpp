@@ -156,10 +156,6 @@ std::vector<std::string> rendererUnsuitabilityReasons(
     if (!features2.features.shaderStorageImageWriteWithoutFormat) {
         reasons.push_back("shaderStorageImageWriteWithoutFormat is not supported");
     }
-    if (!features2.features.shaderInt64) {
-        reasons.push_back("shaderInt64 is not supported");
-    }
-
     const auto storageTransfer = vk::FormatFeatureFlagBits::eStorageImage | vk::FormatFeatureFlagBits::eTransferSrc;
     if (!hasOptimalFormatFeatures(device, vk::Format::eR8G8B8A8Unorm, storageTransfer)) {
         reasons.push_back("R8G8B8A8_UNORM optimal images require storage-image and transfer-source support");
@@ -191,6 +187,28 @@ void printLimits(const vk::PhysicalDeviceLimits& limits) {
     std::cout << "    maxPerStageDescriptorStorageBuffers: " << limits.maxPerStageDescriptorStorageBuffers << '\n';
     std::cout << "    maxPerStageDescriptorStorageImages: " << limits.maxPerStageDescriptorStorageImages << '\n';
     std::cout << "    timestampPeriod: " << limits.timestampPeriod << " ns\n";
+}
+
+std::string sortKeyModeName(
+    const vk::PhysicalDeviceFeatures2& features2,
+    const vk::PhysicalDeviceVulkan12Features& features12,
+    const vk::PhysicalDeviceSubgroupProperties& subgroupProperties
+) {
+    const auto requiredSubgroupOperations = vk::SubgroupFeatureFlagBits::eBasic |
+                                            vk::SubgroupFeatureFlagBits::eArithmetic |
+                                            vk::SubgroupFeatureFlagBits::eBallot;
+    const bool fastUInt64 =
+        features2.features.shaderInt64 && features12.shaderSharedInt64Atomics &&
+        (subgroupProperties.supportedStages & vk::ShaderStageFlagBits::eCompute) &&
+        (subgroupProperties.supportedOperations & requiredSubgroupOperations) == requiredSubgroupOperations &&
+        subgroupProperties.subgroupSize == 32;
+    if (fastUInt64) {
+        return "uint64_fast_subgroup32";
+    }
+    if (features2.features.shaderInt64) {
+        return "uint64_portable";
+    }
+    return "uint32_pair_portable";
 }
 
 nlohmann::json formatSupportJson(vk::PhysicalDevice device, vk::Format format) {
@@ -288,7 +306,8 @@ nlohmann::json deviceJson(size_t index, vk::PhysicalDevice device) {
          {{"VK_FORMAT_R8G8B8A8_UNORM", formatSupportJson(device, vk::Format::eR8G8B8A8Unorm)},
           {"VK_FORMAT_B8G8R8A8_UNORM", formatSupportJson(device, vk::Format::eB8G8R8A8Unorm)},
           {"VK_FORMAT_R16G16B16A16_SFLOAT", formatSupportJson(device, vk::Format::eR16G16B16A16Sfloat)}}},
-        {"renderer_compatibility", {{"compatible", reasons.empty()}, {"reasons", reasons}}}
+        {"renderer_compatibility", {{"compatible", reasons.empty()}, {"reasons", reasons}}},
+        {"selected_sort_key_mode", sortKeyModeName(features2, features12, subgroupProperties)}
     };
 }
 
@@ -354,6 +373,7 @@ void printDevice(size_t index, vk::PhysicalDevice device, bool verboseExtensions
     std::cout << "    shaderStorageImageWriteWithoutFormat: "
               << yesNo(features2.features.shaderStorageImageWriteWithoutFormat) << '\n';
     std::cout << "    shaderSharedInt64Atomics: " << yesNo(features12.shaderSharedInt64Atomics) << '\n';
+    std::cout << "  Selected sort key mode: " << sortKeyModeName(features2, features12, subgroupProperties) << '\n';
 
     std::cout << "  Subgroup properties:\n";
     std::cout << "    subgroupSize: " << subgroupProperties.subgroupSize << '\n';

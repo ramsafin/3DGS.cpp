@@ -38,7 +38,8 @@ At runtime the selected GPU must support the renderer's Vulkan compute requireme
 
 - Vulkan 1.2.
 - A compute queue and compute workgroup size of at least 256.
-- `shaderInt64`.
+- `shaderInt64` is used when available for 64-bit sort keys; devices without it are routed
+  to the integrated portable `uint32` pair sort path.
 - `shaderStorageImageWriteWithoutFormat`.
 - Off-screen mode: `R8G8B8A8_UNORM` optimal images with storage-image and transfer-source support.
 - Viewer mode: graphics and presentation support, dynamic rendering, swapchain support, and surface
@@ -48,8 +49,9 @@ The renderer chooses between two radix-sort implementations at startup:
 
 - Fast mode uses subgroup size 32, compute subgroup basic/arithmetic/ballot operations, and shared
   64-bit atomics.
-- Portable mode avoids those fast-path requirements but still requires the baseline Vulkan features
-  above.
+- Portable mode avoids those fast-path requirements while still using the active sort-key
+  representation chosen for the device (`uint64` when `shaderInt64` is available, otherwise
+  the `uint32` pair path).
 
 Unsupported devices are rejected at startup with capability diagnostics.
 
@@ -112,6 +114,7 @@ Useful CMake options:
 - `VKGS_BUILD_CAPS_APP` (default `OFF`): builds `vkgs_caps`.
 - `VKGS_BUILD_TESTS` (default `OFF`): builds unit and integration tests.
 - `VKGS_ENABLE_PROJECT_WARNINGS` (default `OFF`): enables extra warnings for project-owned targets.
+- `VKGS_ENABLE_SHADER_DEBUG_PRINTF` (default `OFF`): enables shader `debugPrintfEXT` instrumentation and requires `VK_KHR_shader_non_semantic_info`.
 - `VKGS_VERBOSE_CONFIGURE` (default `ON`): prints resolved toolchain and dependency paths.
 
 ## Running

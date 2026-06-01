@@ -15,7 +15,8 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "FETCHCONTENT_QUIET": "ON",
         "VKGS_VERBOSE_CONFIGURE": "ON",
-        "VKGS_BUILD_CAPS_APP": "OFF"
+        "VKGS_BUILD_CAPS_APP": "OFF",
+        "VKGS_ENABLE_SHADER_DEBUG_PRINTF": "OFF"
       }
     },
     {

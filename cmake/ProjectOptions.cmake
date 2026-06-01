@@ -12,6 +12,7 @@ option(VKGS_BUILD_CAPS_APP "Build the Vulkan capability probing application" OFF
 option(VKGS_BUILD_TESTS "Build unit and integration tests" OFF)
 option(VKGS_VERBOSE_CONFIGURE "Print dependency and toolchain resolution details" ON)
 option(VKGS_ENABLE_PROJECT_WARNINGS "Enable warnings for project-owned targets" OFF)
+option(VKGS_ENABLE_SHADER_DEBUG_PRINTF "Enable shader debug printf instrumentation" OFF)
 
 add_library(vkgs_project_options INTERFACE)
 target_compile_options(vkgs_project_options INTERFACE

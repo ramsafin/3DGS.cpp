@@ -90,7 +90,7 @@ getUnsuitabilityReasons(const DeviceRequirements& requirements, const VulkanDevi
     if (!capabilities.shaderStorageImageWriteWithoutFormat) {
         reasons.push_back("shaderStorageImageWriteWithoutFormat is not supported");
     }
-    if (!capabilities.shaderInt64) {
+    if (requirements.shaderInt64 && !capabilities.shaderInt64) {
         reasons.push_back("shaderInt64 is not supported");
     }
     if (requirements.dynamicRendering && !capabilities.dynamicRendering) {
