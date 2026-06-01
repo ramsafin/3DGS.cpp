@@ -14,7 +14,8 @@
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "FETCHCONTENT_QUIET": "ON",
-        "VKGS_VERBOSE_CONFIGURE": "ON"
+        "VKGS_VERBOSE_CONFIGURE": "ON",
+        "VKGS_BUILD_CAPS_APP": "OFF"
       }
     },
     {
@@ -123,6 +124,24 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "ohos-arm64-caps-debug",
+      "displayName": "OHOS arm64 Capability Probe Debug",
+      "inherits": "ohos-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "VKGS_BUILD_CAPS_APP": "ON"
+      }
+    },
+    {
+      "name": "ohos-arm64-caps-release",
+      "displayName": "OHOS arm64 Capability Probe Release",
+      "inherits": "ohos-arm64-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "VKGS_BUILD_CAPS_APP": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -158,6 +177,20 @@
       "configurePreset": "ohos-arm64-core-release",
       "targets": [
         "3dgs_core"
+      ]
+    },
+    {
+      "name": "ohos-arm64-caps-debug",
+      "configurePreset": "ohos-arm64-caps-debug",
+      "targets": [
+        "vkgs_caps"
+      ]
+    },
+    {
+      "name": "ohos-arm64-caps-release",
+      "configurePreset": "ohos-arm64-caps-release",
+      "targets": [
+        "vkgs_caps"
       ]
     }
   ],

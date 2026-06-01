@@ -37,6 +37,7 @@ vkgs_status("Generator" "${CMAKE_GENERATOR}")
 vkgs_status("Build type" "${CMAKE_BUILD_TYPE}")
 vkgs_status("Build viewer" "${VKGS_BUILD_VIEWER}")
 vkgs_status("Build off-screen app" "${VKGS_BUILD_OFFSCREEN_APP}")
+vkgs_status("Build capability probe" "${VKGS_BUILD_CAPS_APP}")
 vkgs_status("Vulkan include dirs" "${Vulkan_INCLUDE_DIRS}")
 vkgs_status("Vulkan library" "${Vulkan_LIBRARY}")
 vkgs_status("Host glslangValidator" "${VKGS_GLSLANG_VALIDATOR}")
@@ -55,7 +56,7 @@ vkgs_add_compile_commands_target()
 
 add_subdirectory(src)
 
-if(VKGS_BUILD_VIEWER OR VKGS_BUILD_OFFSCREEN_APP)
+if(VKGS_BUILD_VIEWER OR VKGS_BUILD_OFFSCREEN_APP OR VKGS_BUILD_CAPS_APP)
     add_subdirectory(apps)
 endif()
 
