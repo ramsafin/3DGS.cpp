@@ -94,6 +94,8 @@ class Renderer {
     std::shared_ptr<Buffer> prefixSumPongBuffer;
     std::shared_ptr<Buffer> sortKBufferEven;
     std::shared_ptr<Buffer> sortKBufferOdd;
+    std::shared_ptr<Buffer> sortDepthKBufferEven;
+    std::shared_ptr<Buffer> sortDepthKBufferOdd;
     std::shared_ptr<Buffer> sortHistBuffer;
     std::shared_ptr<Buffer> totalSumBufferHost;
     std::shared_ptr<Buffer> tileBoundaryBuffer;

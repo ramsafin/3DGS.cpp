@@ -2,9 +2,6 @@
 #extension GL_GOOGLE_include_directive : enable
 #include "./common.glsl"
 
-#ifdef DEBUG
-#extension GL_EXT_debug_printf : enable
-#endif
 
 
 layout (std430, binding = 0) readonly buffer Vertices {
@@ -46,7 +43,7 @@ void main() {
     cov3ds[index * 6 + 4] = cov3d[1][2];
     cov3ds[index * 6 + 5] = cov3d[2][2];
 
-    #ifdef DEBUG
+    #ifdef VKGS_SHADER_DEBUG_PRINTF
     if (index == 0) {
         debugPrintfEXT("scale: %f %f %f\n", vertices[index].scale_opacity.x, vertices[index].scale_opacity.y, vertices[index].scale_opacity.z);
         debugPrintfEXT("cov3d: %f %f %f %f %f %f\n", cov3d[0][0], cov3d[0][1], cov3d[0][2], cov3d[1][1], cov3d[1][2], cov3d[2][2]);

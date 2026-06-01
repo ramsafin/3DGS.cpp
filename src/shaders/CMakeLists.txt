@@ -3,10 +3,14 @@ set(VKGS_SHADER_SOURCES
     prefix_sum.comp
     preprocess.comp
     preprocess_sort.comp
+    preprocess_sort_u32.comp
     render.comp
     tile_boundary.comp
+    tile_boundary_u32.comp
     sort/hist.comp
+    sort/hist_u32.comp
     sort/sort.comp
+    sort/sort_pair_u32_portable.comp
     sort/sort_portable.comp
 )
 
@@ -22,7 +26,7 @@ set(VKGS_SHADER_HEADER "${VKGS_SHADER_GENERATED_DIR}/shaders.hpp")
 set(VKGS_SHADER_EMBED_SCRIPT "${PROJECT_SOURCE_DIR}/tools/embed_shaders.py")
 
 set(VKGS_SHADER_DEFINITIONS
-    "$<$<CONFIG:Debug>:-DDEBUG>"
+    "$<$<BOOL:${VKGS_ENABLE_SHADER_DEBUG_PRINTF}>:-DVKGS_SHADER_DEBUG_PRINTF>"
     "$<$<NOT:$<CONFIG:Debug>>:-DNDEBUG>"
 )
 

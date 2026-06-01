@@ -4,7 +4,7 @@
 #define TILE_HEIGHT VKGS_TILE_HEIGHT
 #define SH_MAX_COEFFS VKGS_SH_MAX_COEFFS
 
-#ifdef DEBUG
+#ifdef VKGS_SHADER_DEBUG_PRINTF
 #extension GL_EXT_debug_printf : enable
 #define assert( condition, message, value ) if( ! bool(condition) ){ \
        debugPrintfEXT( message, value ); \

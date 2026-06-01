@@ -26,24 +26,22 @@ std::string joinReasons(const std::vector<std::string>& reasons) {
     return message.str();
 }
 
-bool supportsFastRadixSort(vk::PhysicalDevice device) {
-    vk::PhysicalDeviceVulkan12Features features12{};
-    vk::PhysicalDeviceFeatures2 features2{};
-    features2.pNext = &features12;
-    device.getFeatures2(&features2);
+bool supportsFastRadixSort(const vkgs::vulkan::VulkanDeviceCapabilities& capabilities) {
+    return capabilities.shaderInt64 && capabilities.shaderSharedInt64Atomics && capabilities.subgroupCompute &&
+           capabilities.subgroupBasic && capabilities.subgroupArithmetic && capabilities.subgroupBallot &&
+           capabilities.subgroupSize == kRequiredSubgroupSize;
+}
 
-    vk::PhysicalDeviceSubgroupProperties subgroupProperties{};
-    vk::PhysicalDeviceProperties2 properties2{};
-    properties2.pNext = &subgroupProperties;
-    device.getProperties2(&properties2);
-
-    const auto requiredSubgroupOperations = vk::SubgroupFeatureFlagBits::eBasic |
-                                            vk::SubgroupFeatureFlagBits::eArithmetic |
-                                            vk::SubgroupFeatureFlagBits::eBallot;
-    return features12.shaderSharedInt64Atomics &&
-           (subgroupProperties.supportedStages & vk::ShaderStageFlagBits::eCompute) &&
-           (subgroupProperties.supportedOperations & requiredSubgroupOperations) == requiredSubgroupOperations &&
-           subgroupProperties.subgroupSize == kRequiredSubgroupSize;
+const char* sortKeyModeName(VulkanContext::SortKeyMode mode) {
+    switch (mode) {
+    case VulkanContext::SortKeyMode::UInt64FastSubgroup32:
+        return "uint64 fast subgroup-32";
+    case VulkanContext::SortKeyMode::UInt64Portable:
+        return "uint64 portable";
+    case VulkanContext::SortKeyMode::UInt32PairPortable:
+        return "uint32 pair portable";
+    }
+    return "unknown";
 }
 } // namespace
 
@@ -87,7 +85,7 @@ VulkanContext::VulkanContext(
 #ifdef VKGS_RENDER_MODE_ONSCREEN
     deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
 #endif
-#ifdef DEBUG
+#ifdef VKGS_ENABLE_SHADER_DEBUG_PRINTF
     deviceExtensions.push_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 #endif
 
@@ -154,6 +152,7 @@ vkgs::vulkan::DeviceRequirements VulkanContext::getDeviceRequirements(bool requi
     requirements.timestampComputeQueue = true;
     requirements.unifiedGraphicsComputeTimestampQueue = true;
     requirements.dynamicRendering = true;
+    requirements.shaderInt64 = true;
 #else
     requirements.offscreenStorageTransferFormat = true;
 #endif
@@ -163,10 +162,24 @@ vkgs::vulkan::DeviceRequirements VulkanContext::getDeviceRequirements(bool requi
 vkgs::vulkan::VulkanDeviceCapabilities
 VulkanContext::inspectDeviceCapabilities(vk::PhysicalDevice device, std::optional<vk::SurfaceKHR> surface) const {
     vkgs::vulkan::VulkanDeviceCapabilities capabilities;
-    const auto properties = device.getProperties();
+    vk::PhysicalDeviceSubgroupProperties subgroupProperties{};
+    vk::PhysicalDeviceProperties2 properties2{};
+    properties2.pNext = &subgroupProperties;
+    device.getProperties2(&properties2);
+
+    const auto properties = properties2.properties;
     capabilities.apiVersion = properties.apiVersion;
     capabilities.maxComputeWorkgroupInvocations = properties.limits.maxComputeWorkGroupInvocations;
     capabilities.maxComputeWorkgroupSizeX = properties.limits.maxComputeWorkGroupSize[0];
+    capabilities.subgroupSize = subgroupProperties.subgroupSize;
+    capabilities.subgroupCompute =
+        static_cast<bool>(subgroupProperties.supportedStages & vk::ShaderStageFlagBits::eCompute);
+    capabilities.subgroupBasic =
+        static_cast<bool>(subgroupProperties.supportedOperations & vk::SubgroupFeatureFlagBits::eBasic);
+    capabilities.subgroupArithmetic =
+        static_cast<bool>(subgroupProperties.supportedOperations & vk::SubgroupFeatureFlagBits::eArithmetic);
+    capabilities.subgroupBallot =
+        static_cast<bool>(subgroupProperties.supportedOperations & vk::SubgroupFeatureFlagBits::eBallot);
 
     for (const auto& extension : device.enumerateDeviceExtensionProperties()) {
         capabilities.extensions.emplace_back(extension.extensionName.data());
@@ -194,6 +207,7 @@ VulkanContext::inspectDeviceCapabilities(vk::PhysicalDevice device, std::optiona
         device.getFeatures2(&features2);
         capabilities.shaderStorageImageWriteWithoutFormat = features2.features.shaderStorageImageWriteWithoutFormat;
         capabilities.shaderInt64 = features2.features.shaderInt64;
+        capabilities.shaderSharedInt64Atomics = features12.shaderSharedInt64Atomics;
 #ifdef VKGS_RENDER_MODE_ONSCREEN
         capabilities.dynamicRendering = dynamicRenderingFeatures.dynamicRendering;
 #endif
@@ -302,13 +316,31 @@ void VulkanContext::updateSelectedDeviceCapabilities() {
 
     const auto queueFamilies = physicalDevice.getQueueFamilyProperties();
     timestampQueriesSupported = queueFamilies[indices.computeFamily.value()].timestampValidBits > 0;
-    radixSortMode = supportsFastRadixSort(physicalDevice) ? RadixSortMode::FastSubgroup32 : RadixSortMode::Portable;
+
+    const auto capabilities = inspectDeviceCapabilities(physicalDevice, std::nullopt);
+    if (supportsFastRadixSort(capabilities)) {
+        radixSortMode = RadixSortMode::FastSubgroup32;
+        sortKeyMode = SortKeyMode::UInt64FastSubgroup32;
+    } else if (capabilities.shaderInt64) {
+        radixSortMode = RadixSortMode::Portable;
+        sortKeyMode = SortKeyMode::UInt64Portable;
+    } else {
+        radixSortMode = RadixSortMode::Portable;
+        sortKeyMode = SortKeyMode::UInt32PairPortable;
+    }
 
     spdlog::info("Timestamp metrics: {}", timestampQueriesSupported ? "enabled" : "disabled");
     spdlog::info(
         "Radix sort mode: {}",
         radixSortMode == RadixSortMode::FastSubgroup32 ? "fast subgroup-32" : "portable"
     );
+    spdlog::info("Sort key mode: {}", sortKeyModeName(sortKeyMode));
+    if (sortKeyMode == SortKeyMode::UInt32PairPortable) {
+        spdlog::warn(
+            "Selected device lacks shaderInt64; using planned uint32-pair sort key mode. "
+            "The uint32 shader pipeline is not implemented yet."
+        );
+    }
 }
 
 void VulkanContext::createQueryPool() {
@@ -451,13 +483,13 @@ void VulkanContext::createDescriptorPool(uint8_t framesInFlight) {
     // get max number of descriptor sets from physical device
     std::vector<vk::DescriptorPoolSize> poolSizes = {
         {vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(framesInFlight * 10)},
-        {vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(framesInFlight * 50)},
+        {vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(framesInFlight * 96)},
         {vk::DescriptorType::eStorageImage, static_cast<uint32_t>(framesInFlight * 10)}
     };
 
     vk::DescriptorPoolCreateInfo poolInfo{
         vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
-        100,
+        160,
         static_cast<uint32_t>(poolSizes.size()),
         poolSizes.data()
     };

@@ -72,3 +72,21 @@ TEST(DeviceRequirements, AcceptsCompleteCapabilities) {
     const auto reasons = vkgs::vulkan::getUnsuitabilityReasons({}, capableDevice());
     EXPECT_TRUE(reasons.empty());
 }
+
+TEST(DeviceRequirements, AcceptsMissingShaderInt64WhenNotRequired) {
+    auto capabilities = capableDevice();
+    capabilities.shaderInt64 = false;
+
+    const auto reasons = vkgs::vulkan::getUnsuitabilityReasons({}, capabilities);
+    EXPECT_FALSE(contains(reasons, "shaderInt64 is not supported"));
+}
+
+TEST(DeviceRequirements, ReportsMissingShaderInt64WhenRequired) {
+    auto capabilities = capableDevice();
+    capabilities.shaderInt64 = false;
+    vkgs::vulkan::DeviceRequirements requirements;
+    requirements.shaderInt64 = true;
+
+    const auto reasons = vkgs::vulkan::getUnsuitabilityReasons(requirements, capabilities);
+    EXPECT_TRUE(contains(reasons, "shaderInt64 is not supported"));
+}

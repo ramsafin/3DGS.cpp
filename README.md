@@ -10,6 +10,7 @@ The repository currently provides:
 - `3dgs_core`: a static C++20 library with the off-screen renderer API.
 - `3dgs_viewer`: an optional GLFW/ImGui viewer for interactive scene inspection.
 - `3dgs_render`: an optional headless renderer that reads JSON camera jobs and writes PPM images.
+- `vkgs_caps`: an optional Vulkan capability probe for diagnosing target devices.
 - Vulkan compute shaders for covariance precompute, preprocess, prefix sum, radix sort, tile
   boundary construction, and tiled compositing.
 - Engineering docs for architecture, rendering math, shader passes, and future training extension
@@ -37,7 +38,8 @@ At runtime the selected GPU must support the renderer's Vulkan compute requireme
 
 - Vulkan 1.2.
 - A compute queue and compute workgroup size of at least 256.
-- `shaderInt64`.
+- `shaderInt64` is used when available for 64-bit sort keys; devices without it are routed
+  to the integrated portable `uint32` pair sort path.
 - `shaderStorageImageWriteWithoutFormat`.
 - Off-screen mode: `R8G8B8A8_UNORM` optimal images with storage-image and transfer-source support.
 - Viewer mode: graphics and presentation support, dynamic rendering, swapchain support, and surface
@@ -47,8 +49,9 @@ The renderer chooses between two radix-sort implementations at startup:
 
 - Fast mode uses subgroup size 32, compute subgroup basic/arithmetic/ballot operations, and shared
   64-bit atomics.
-- Portable mode avoids those fast-path requirements but still requires the baseline Vulkan features
-  above.
+- Portable mode avoids those fast-path requirements while still using the active sort-key
+  representation chosen for the device (`uint64` when `shaderInt64` is available, otherwise
+  the `uint32` pair path).
 
 Unsupported devices are rejected at startup with capability diagnostics.
 
@@ -68,7 +71,7 @@ Dependencies are archive-pinned and fetched by CMake:
 - spdlog
 - Vulkan-Headers
 - GLFW, ImGui, and ImPlot when `VKGS_BUILD_VIEWER=ON`
-- nlohmann/json when `VKGS_BUILD_OFFSCREEN_APP=ON` or `VKGS_BUILD_TESTS=ON`
+- nlohmann/json when `VKGS_BUILD_OFFSCREEN_APP=ON`, `VKGS_BUILD_TESTS=ON`, or `VKGS_BUILD_CAPS_APP=ON`
 - GoogleTest when `VKGS_BUILD_TESTS=ON`
 
 ## Building
@@ -92,6 +95,8 @@ Available presets:
 | `windows-msvc-tooling-debug` | Core, viewer, off-screen app, tests, tooling targets | Debug | all project targets |
 | `ohos-arm64-core-debug` | Core library only | Debug | `3dgs_core` |
 | `ohos-arm64-core-release` | Core library only | Release | `3dgs_core` |
+| `ohos-arm64-caps-debug` | Core, capability probe | Debug | `vkgs_caps` |
+| `ohos-arm64-caps-release` | Core, capability probe | Release | `vkgs_caps` |
 
 The OHOS presets require a configured OHOS native SDK and `OHOS_SDK_NATIVE` in the environment.
 
@@ -106,8 +111,10 @@ Useful CMake options:
 
 - `VKGS_BUILD_VIEWER` (default `ON`): builds GLFW window/swapchain support and `3dgs_viewer`.
 - `VKGS_BUILD_OFFSCREEN_APP` (default `ON`): builds `3dgs_render`.
+- `VKGS_BUILD_CAPS_APP` (default `OFF`): builds `vkgs_caps`.
 - `VKGS_BUILD_TESTS` (default `OFF`): builds unit and integration tests.
 - `VKGS_ENABLE_PROJECT_WARNINGS` (default `OFF`): enables extra warnings for project-owned targets.
+- `VKGS_ENABLE_SHADER_DEBUG_PRINTF` (default `OFF`): enables shader `debugPrintfEXT` instrumentation and requires `VK_KHR_shader_non_semantic_info`.
 - `VKGS_VERBOSE_CONFIGURE` (default `ON`): prints resolved toolchain and dependency paths.
 
 ## Running
@@ -143,6 +150,18 @@ build/windows-msvc-onscreen-debug/apps/viewer/3dgs_viewer.exe `
 ```
 
 The viewer supports orbit/pan/dolly camera controls and an optional ImGui/ImPlot overlay.
+
+### Vulkan Capability Probe
+
+```text
+vkgs_caps [--verbose-extensions] [--json <path>]
+```
+
+`vkgs_caps` enumerates Vulkan instance and physical-device capabilities without selecting a
+renderer device or creating renderer resources. Use it on OHOS targets to capture extension,
+feature, queue-family, limit, subgroup, and off-screen image-format support before deciding which
+renderer fallback path is required. Pass `--json <path>` to save the same diagnostics in a
+structured JSON report for comparison across OHOS devices and driver builds.
 
 ### Off-Screen Renderer
 
