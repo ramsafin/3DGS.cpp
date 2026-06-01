@@ -1,5 +1,7 @@
 #include "GUIManager.hpp"
 
+#include <memory>
+
 #include "imgui.h"
 #include "implot/implot.h"
 
