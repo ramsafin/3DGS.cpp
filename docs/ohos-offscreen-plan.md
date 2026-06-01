@@ -22,7 +22,7 @@ A separate executable under `apps/` should avoid linking the full renderer path 
 
 ## Proposed probe target
 
-Add an app target such as `vkgs_caps` under `apps/caps/` and gate it with a CMake option such as `VKGS_BUILD_CAPS_APP`. For OHOS, add a preset or override that enables only this app first.
+`vkgs_caps` lives under `apps/caps/` and is gated by the `VKGS_BUILD_CAPS_APP` CMake option. Use the `ohos-arm64-caps-debug` or `ohos-arm64-caps-release` preset to build only the probe target for OHOS deployment.
 
 Recommended output:
 
@@ -42,7 +42,7 @@ Recommended output:
     - optionally `VK_FORMAT_B8G8R8A8_UNORM` and `VK_FORMAT_R16G16B16A16_SFLOAT`,
   - a renderer-compatibility summary using the same checks as `DeviceRequirements`.
 
-The probe should emit both human-readable text and an optional JSON file so OHOS logs can be compared across devices and OS builds.
+`vkgs_caps --json <path>` emits both human-readable text and a structured JSON file so OHOS logs can be compared across devices and OS builds.
 
 ## Decision tree after collecting capability logs
 
@@ -80,7 +80,7 @@ Keep rendering functional and disable timing queries. The current off-screen req
 
 ## Suggested implementation sequence
 
-1. Add and deploy `vkgs_caps` for OHOS; collect logs from the target device.
+1. Build and deploy `vkgs_caps` for OHOS; collect logs from the target device.
 2. Remove the debug-only hard dependency on `VK_KHR_shader_non_semantic_info` if the probe confirms it is absent.
 3. Re-run `3dgs_render`; if it still fails only on `shaderInt64`, implement a no-`shaderInt64` key/sort path behind a runtime capability switch.
 4. Add tests for device-requirement classification and sort-key packing/splitting.

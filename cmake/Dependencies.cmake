@@ -63,7 +63,7 @@ if(VKGS_BUILD_VIEWER)
     vkgs_require_msvc_ninja_environment(glfw)
 endif()
 
-if(VKGS_BUILD_OFFSCREEN_APP OR VKGS_BUILD_TESTS)
+if(VKGS_BUILD_OFFSCREEN_APP OR VKGS_BUILD_TESTS OR VKGS_BUILD_CAPS_APP)
     vkgs_declare_archive(nlohmann_json
         "https://github.com/nlohmann/json/archive/refs/tags/v3.12.0.tar.gz"
         "4b92eb0c06d10683f7447ce9406cb97cd4b453be18d7279320f7b2f025c10187"
